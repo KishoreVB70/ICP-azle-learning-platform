@@ -104,5 +104,39 @@ function filterCourses_OR(payload) {
         };
       }
     
-      return { result: courses };
+      return courses;
 }
+
+function filterCourses_And(payload) {
+    // Add a separate function to check if payload is empty
+    if (!payload.keyword && !payload.category && !payload.creatorAddress) {
+      return {
+        error: "Filter payload is empty; at least one filter criterion must be provided",
+      };
+    }
+  
+    const courses: Course[] = [];
+    courseStorage.forEach((course) => {
+      let matches = true;
+      if (payload.keyword) {
+        matches = matches && course.keyword === payload.keyword;
+      }
+      if (payload.category) {
+        matches = matches && course.category === payload.category;
+      }
+      if (payload.creatorAddress) {
+        matches = matches && course.creatorAddress === payload.creatorAddress;
+      }
+      if (matches) {
+        courses.push(course);
+      }
+    });
+  
+    if (courses.length === 0) {
+      return {
+        error: "Couldn't find a course with provided inputs",
+      };
+    }
+  
+    return courses;
+  }
