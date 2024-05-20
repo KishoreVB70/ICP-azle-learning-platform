@@ -74,3 +74,35 @@ function getCurrentDate() {
    const timestamp = new Number(ic.time());
    return new Date(timestamp.valueOf() / 1000_000);
 }
+
+function filterCourses_OR(payload) {
+    if (!payload.keyword && !payload.category && !payload.creatorAddress) {
+        return {
+          error: "Filter payload is empty; at least one filter criterion must be provided",
+        };
+    }
+    const courses: Course[] = [];
+    courseStorage.forEach((course) => {
+        let matches = false;
+        if (payload.keyword) {
+          matches = course.keyword === payload.keyword;
+        }
+        if (payload.category) {
+          matches = matches || course.category === payload.category;
+        }
+        if (payload.creatorAddress) {
+          matches = matches || course.creatorAddress === payload.creatorAddress;
+        }
+        if (matches) {
+          courses.push(course);
+        }
+      });
+    
+      if (courses.length === 0) {
+        return {
+          error: "Couldn't find a course with provided inputs",
+        };
+      }
+    
+      return { result: courses };
+}
