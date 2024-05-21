@@ -68,6 +68,19 @@ export default Server(() => {
       }
    });
 
+   app.put("/admin/:address", (req, res) => {
+      const address: string = req.params.address;
+      setAdmin(address);
+      if ("None" in courseOpt) {
+         res.status(400).send(`couldn't update a course with id=${courseId}. course not found`);
+      } else {
+         const course = courseOpt.Some;
+         const updatedMessage = { ...course, ...req.body, updatedAt: getCurrentDate()};
+         courseStorage.insert(course.id, updatedMessage);
+         res.json(updatedMessage);
+      }
+   });
+
    app.delete("/courses/:id", (req, res) => {
       const courseId = req.params.id;
       const result = delete_course(courseId);
@@ -83,8 +96,14 @@ export default Server(() => {
 
 function setAdmin(address: string): string {
   if(admin) {
-    return "admin already set";
+    let caller = ic.caller().toString();
+    if (caller == admin) {
+      admin = address;
+      return admin;
+    } 
+    return "You are not authorized to change the admin";
   }
+
   admin = address;
   return admin;
 }
