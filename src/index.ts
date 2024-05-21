@@ -37,6 +37,7 @@ function Err<E>(error: E): Result<never, E> {
 const courseStorage = StableBTreeMap<string, Course>(0);
 let admin: string;
 let moderators: string[];
+let bannedUsers: string[];
 
 export default Server(() => {
   const app = express();
@@ -97,6 +98,17 @@ export default Server(() => {
   app.put("/moderator/:address", (req, res) => {
     const address = req.params.address;
     const result = addModerator(address);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
+  // Ban user
+  app.put("/ban/:address", (req, res) => {
+    const address = req.params.address;
+    const result = banUser(address);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -172,6 +184,23 @@ function addModerator(address: string): Result<string, string> {
   return Ok(address);
 }
 
+function banUser(address: string): Result<string, string> {
+  const caller = ic.caller.toString();
+  if (
+    caller != admin || !moderators.includes(caller) ||
+    address == admin || moderators.includes(address)
+  ) {
+    return Err("you are not authorized to ban the user")
+  }
+  // Delete all the courses of the banned user
+  const result = delete_all_courses(address)
+  if(result.type ==='Ok') {
+    bannedUsers.push(address)
+    return Ok(address);
+  } else {
+    return Err("User has no courses, cannot ban");
+  }
+}
 function getCurrentDate() {
    const timestamp = new Number(ic.time());
    return new Date(timestamp.valueOf() / 1000_000);
@@ -264,7 +293,6 @@ function update_course(id: string): Result<Course, string> {
   }
 }
 
-
 // Either the course creator or the admin or a moderator can delete a course
 function delete_course(id: string): Result<Course,string> {
   let caller = ic.caller.toString();
@@ -281,7 +309,6 @@ function delete_course(id: string): Result<Course,string> {
       }
   }
 }
-
 
 // Either the course creator or the admin or a moderator can delete a course
 function delete_courses(address: string): Result<string[], string> {
