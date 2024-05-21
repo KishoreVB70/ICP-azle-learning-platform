@@ -36,8 +36,8 @@ function Err<E>(error: E): Result<never, E> {
 // Conver them into persistent memory
 const courseStorage = StableBTreeMap<string, Course>(0);
 const moderatorsStorage =  StableBTreeMap<string, string>(1);
+const bannedUsersStorage = StableBTreeMap<string, string>(2);
 let admin: string;
-let bannedUsers: string[];
 
 export default Server(() => {
   const app = express();
@@ -278,7 +278,7 @@ function banUser(address: string): Result<string, string> {
   // Delete all the courses of the banned user
   const result = delete_all_courses(address)
   if(result.type ==='Ok') {
-    bannedUsers.push(address)
+    bannedUsersStorage.insert(uuidv4(), address);
     return Ok(address);
   } else {
     return Err("User has no courses, cannot ban");
@@ -294,13 +294,24 @@ function unBanUser(address: string): Result<string, string> {
     return Err("you are not authorized to unban the user")
   }
 
-  if(!bannedUsers.includes(address)) {
+  const bannedUsers = bannedUsersStorage.items();
+
+  let is_banned: bool = false;
+  let id: string = ""
+
+  for (const [key, value] of bannedUsers) {
+    if (value == address) {
+      is_banned = true;
+      id = key;
+    }
+  }
+
+  if(!is_banned) {
     return Err("User is not banned");
   }
 
   // Remove user from the list of banned users
-  const index = bannedUsers.indexOf(address);
-  bannedUsers.splice(index);
+  bannedUsersStorage.remove(id);
   return Ok(address);
 
 }
