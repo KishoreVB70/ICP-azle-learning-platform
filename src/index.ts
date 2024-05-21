@@ -5,8 +5,8 @@ import express from 'express';
 
 class Course {
    id: string;
-   creatorName: string;
    creatorAddress: string; // Store the principal
+   creatorName: string;
    title: string;
    content: string;
    attachmentURL: string;
