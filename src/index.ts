@@ -251,15 +251,26 @@ function removeModerator(address: string): Result<string, string> {
   return Ok(address);
 }
 
+function is_moderator(address: string): bool {
+  const moderators = moderatorsStorage.items();
+  for (const [key, value] of moderators) {
+    if (value == address) {
+      return true;
+    }
+  }
+  return false;
+
+}
+
 // Either admin or a moderator can access
 function banUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
   if (
     // Check whether the user is authorized
-    caller != admin || !moderators.includes(caller) ||
+    caller != admin || !is_moderator(caller) ||
 
     // Check if the address to be banned is a moderator or admin
-    address == admin || moderators.includes(address)
+    address == admin || is_moderator(address)
   ) {
     return Err("you are not authorized to ban the user")
   }
