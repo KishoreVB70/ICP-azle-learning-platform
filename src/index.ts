@@ -231,15 +231,19 @@ function removeModerator(address: string): Result<string, string> {
   return Ok(address);
 }
 
-
+// Either admin or a moderator can access
 function banUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
   if (
+    // Check whether the user is authorized
     caller != admin || !moderators.includes(caller) ||
+
+    // Check if the address to be banned is a moderator or admin
     address == admin || moderators.includes(address)
   ) {
     return Err("you are not authorized to ban the user")
   }
+
   // Delete all the courses of the banned user
   const result = delete_all_courses(address)
   if(result.type ==='Ok') {
@@ -275,9 +279,9 @@ function getCurrentDate() {
    return new Date(timestamp.valueOf() / 1000_000);
 }
 
-function filterCourses_OR(payload: FilterPayload): Course[] | string {
+function filterCourses_OR(payload: FilterPayload): Result<Course[], string> {
   if (!payload.keyword && !payload.category && !payload.creatorName) {
-      return "Filter payload is empty; at least one filter criterion must be provided";
+      return Err("Filter payload is empty; at least one filter criterion must be provided");
   }
 
   // Create an empty array
@@ -305,15 +309,15 @@ function filterCourses_OR(payload: FilterPayload): Course[] | string {
   }
 
   if (courses.length === 0) {
-    return "not found";
+    return Err("not found");
   }
-    return courses;
+    return Ok(courses);
 }
 
-function filterCourses_And(payload: FilterPayload): Course[] | string {
+function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
   // Add a separate function to check if payload is empty
   if (!payload.keyword && !payload.category && !payload.creatorName) {
-    return "Filter payload is empty; at least one filter criterion must be provided";
+    return Err("Filter payload is empty; at least one filter criterion must be provided");
   }
   
   const courses: Course[] = [];
@@ -340,10 +344,10 @@ function filterCourses_And(payload: FilterPayload): Course[] | string {
   }
 
   if (courses.length === 0) {
-    return "No courses";
+    return Err("No courses");
   }
 
-  return courses;
+  return Ok(courses);
 }
 
 // Either the course creator or the admin or a moderator can update a course
