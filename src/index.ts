@@ -1,6 +1,6 @@
 // cannister code goes here
 import { v4 as uuidv4 } from 'uuid';
-import { Server, StableBTreeMap, ic } from 'azle';
+import { Server, StableBTreeMap, bool, ic } from 'azle';
 import express from 'express';
 
 class Course {
@@ -232,9 +232,14 @@ function removeModerator(address: string): Result<string, string> {
 
   let moderators = moderatorsStorage.items();
   let is_moderator: boolean = false;
+
+  // Obtain the id of the address
+  let id: string = "";
   for (const [key, value] of moderators) {
     if (value == address) {
       is_moderator = true;
+      id = key;
+      break;
     }
   }
 
@@ -242,7 +247,7 @@ function removeModerator(address: string): Result<string, string> {
     return Err("Provided address is not a moderator");
   }
 
-  moderatorsStorage.remove(address);
+  moderatorsStorage.remove(id);
   return Ok(address);
 }
 
