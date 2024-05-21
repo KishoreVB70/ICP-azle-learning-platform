@@ -40,76 +40,83 @@ let admin: string;
 let moderators: string[];
 
 export default Server(() => {
-   const app = express();
-   app.use(express.json());
+  const app = express();
+  app.use(express.json());
 
-   app.post("/courses", (req, res) => {
-      const course: Course =  {
-        id: uuidv4(), createdAt: getCurrentDate(),
-        creatorAddress: ic.caller().toString(), ...req.body
-      };
-      courseStorage.insert(course.id, course);
-      res.json(course);
-   });
+  // Add course
+  app.post("/courses", (req, res) => {
+    const course: Course =  {
+      id: uuidv4(), createdAt: getCurrentDate(),
+      creatorAddress: ic.caller().toString(), ...req.body
+    };
+    courseStorage.insert(course.id, course);
+    res.json(course);
+  });
 
-   app.get("/courses", (req, res) => {
-      res.json(courseStorage.values());
-   });
+  // Get all courses
+  app.get("/courses", (req, res) => {
+    res.json(courseStorage.values());
+  });
 
-   app.get("/courses/:id", (req, res) => {
-      const courseId = req.params.id;
-      const courseOpt = courseStorage.get(courseId);
-      if ("None" in courseOpt) {
-         res.status(404).send(`the course with id=${courseId} not found`);
-      } else {
-         res.json(courseOpt.Some);
-      }
-   });
+  // Get one course
+  app.get("/courses/:id", (req, res) => {
+    const courseId = req.params.id;
+    const courseOpt = courseStorage.get(courseId);
+    if ("None" in courseOpt) {
+        res.status(404).send(`the course with id=${courseId} not found`);
+    } else {
+        res.json(courseOpt.Some);
+    }
+  });
 
-   app.put("/courses/:id", (req, res) => {
-      const courseId = req.params.id;
-      const courseOpt = courseStorage.get(courseId);
-      if ("None" in courseOpt) {
-         res.status(400).send(`couldn't update a course with id=${courseId}. course not found`);
-      } else {
-         const course = courseOpt.Some;
-         const updatedMessage = { ...course, ...req.body, updatedAt: getCurrentDate()};
-         courseStorage.insert(course.id, updatedMessage);
-         res.json(updatedMessage);
-      }
-   });
+  // Update course
+  app.put("/courses/:id", (req, res) => {
+    const id = req.params.id;
+    const result = update_course(id);
+    if (result.type === 'Ok') {
+      const course = result.value;
+      const updatedMessage = { ...course, ...req.body, updatedAt: getCurrentDate()};
+      courseStorage.insert(course.id, updatedMessage);
+      res.json(updatedMessage);
+    } else {
+      res.status(400).send(`couldn't update a course with id=${id}. course not found`);
+    }
+  });
 
-   app.put("/moderator/:address", (req, res) => {
-      const address = req.params.address;
-      const result = addModerator(address);
-      if (result.type === 'Ok') {
-        res.json(result.value);
-      } else {
-        res.status(400).send(result.error);
-      }
-   });
+  // Add admin
+  app.put("/admin/:address", (req, res) => {
+    const address = req.params.address;
+    const result = setAdmin(address);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
 
-   app.put("/admin/:address", (req, res) => {
-      const address = req.params.address;
-      const result = setAdmin(address);
-      if (result.type === 'Ok') {
-        res.json(result.value);
-      } else {
-        res.status(400).send(result.error);
-      }
-   });
+  // Add moderator
+  app.put("/moderator/:address", (req, res) => {
+    const address = req.params.address;
+    const result = addModerator(address);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
 
-   app.delete("/courses/:id", (req, res) => {
-      const courseId = req.params.id;
-      const result = delete_course(courseId);
-      if (result.type === 'Ok') {
-        res.json(result.value);
-      } else {
-        res.status(400).send(result.error);
-      }
-   });
+  // Delete course
+  app.delete("/courses/:id", (req, res) => {
+    const courseId = req.params.id;
+    const result = delete_course(courseId);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
 
-   return app.listen();
+  return app.listen();
 });
 
 function setAdmin(address: string): Result<string, string> {
@@ -226,13 +233,28 @@ function delete_course(id: string): Result<Course,string> {
   const courseOpt = courseStorage.get(id);
   if ("None" in courseOpt) {
     return Err(`Course with id=${id} not found`);
- } else {
-    const course = courseOpt.Some;
-    if (caller == admin || caller ==  course.creatorAddress) {
-      courseStorage.remove(id);
-      return Ok(course);
+  } else {
+      const course = courseOpt.Some;
+      if (caller == admin || caller ==  course.creatorAddress) {
+        courseStorage.remove(id);
+        return Ok(course);
+      } else {
+        return Err(`you are not authorized to delete course with id=${id}`);
+      }
+  }
+}
+
+function update_course(id: string): Result<Course, string> {
+  let caller = ic.caller().toString();
+  const courseOpt = courseStorage.get(id);
+  if ("None" in courseOpt) {
+     return Err(`couldn't update a course with id=${id}. course not found`);
+  } else {
+     const course = courseOpt.Some;
+    if (caller == admin || moderators.includes(caller) || caller == course.creatorAddress ) {
+      return Ok(course)
     } else {
-      return Err(`you are not authorized to delete course with id=${id}`);
+      return Err(`you are not authorized to update the course with id=${id}`)
     }
- }
+  }
 }
