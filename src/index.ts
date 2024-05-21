@@ -25,6 +25,7 @@ class FilterPayload {
 }
 
 const courseStorage = StableBTreeMap<string, Course>(0);
+let admin: string;
 
 export default Server(() => {
    const app = express();
@@ -78,6 +79,14 @@ export default Server(() => {
 
    return app.listen();
 });
+
+function setAdmin(address: string): string {
+  if(admin) {
+    return "admin already set";
+  }
+  admin = address;
+  return "successful"
+}
 
 function getCurrentDate() {
    const timestamp = new Number(ic.time());
