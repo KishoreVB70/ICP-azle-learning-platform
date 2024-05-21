@@ -170,6 +170,7 @@ export default Server(() => {
   return app.listen();
 });
 
+// If not already initialized, only admin can change
 function setAdmin(address: string): Result<string, string> {
   let caller: string = ic.caller().toString();
   if (admin) {
@@ -183,6 +184,7 @@ function setAdmin(address: string): Result<string, string> {
   return Ok(address);
 }
 
+// Add moderator -> only admin can call
 function addModerator(address: string): Result<string, string> {
   let caller = ic.caller().toString();
 
@@ -199,6 +201,22 @@ function addModerator(address: string): Result<string, string> {
   }
 
   moderators.push(address);
+  return Ok(address);
+}
+
+// Remove a moderator -> only admin can call
+function removeModerator(address: string): Result<string, string> {
+  const caller = ic.caller().toString();
+  if(caller != admin) {
+    return Err("You are not authorized to remove a moderator");
+  }
+
+  if(!moderators.includes(address)){
+    return Err("Provided address is not a moderator");
+  }
+
+  const index = moderators.indexOf(address);
+  moderators.splice(index);
   return Ok(address);
 }
 
