@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { Server, StableBTreeMap, ic } from 'azle';
 import express from 'express';
 
-
 class Course {
    id: string;
    creatorName: string;
@@ -118,7 +117,8 @@ export default Server(() => {
 
   // Delete all my courses course
   app.delete("/courses/", (req, res) => {
-    const result = delete_my_courses();
+    let caller: string = ic.caller.toString();
+    const result = delete_all_courses(caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -283,30 +283,18 @@ function delete_course(id: string): Result<Course,string> {
 }
 
 
-function delete_my_courses(): Result<String[],string> {
-  let caller = ic.caller.toString();
-  let keysOfCaller: string[] = [];
-  let items = courseStorage.items();
-
-  for (const [key, course] of items) {
-    if (course.creatorAddress == caller) {
-      keysOfCaller.push(key)
-    }
-  }
-  if (keysOfCaller.length > 0){
-    for (let id of keysOfCaller) {
-      courseStorage.remove(id);
-    }
-    return Ok(keysOfCaller);
-  } else {
-    return Err("no courses for the caller");
-  }
-}
-
 // Either the course creator or the admin or a moderator can delete a course
 function delete_courses(address: string): Result<string[], string> {
   let caller = ic.caller.toString();
   if (caller == admin || moderators.includes(caller) || caller ==  address) {
+    return delete_all_courses(address);
+  } else {
+    return Err(`you are not authorized to delete courses for the address=${address}`);
+  }
+}
+
+// Helper function to delete all the courses of the input address
+function delete_all_courses(address: string): Result<string[], string> {
     let keysOfAddress: string[] = [];
     let items = courseStorage.items();
   
@@ -323,8 +311,4 @@ function delete_courses(address: string): Result<string[], string> {
     } else {
       return Err("no courses for the address");
     }
-  } else {
-    return Err(`you are not authorized to delete courses for the address=${address}`);
-  }
 }
-
