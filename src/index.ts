@@ -79,16 +79,13 @@ export default Server(() => {
       }
    });
 
-   app.put("/courses/:id", (req, res) => {
-      const courseId = req.params.id;
-      const courseOpt = courseStorage.get(courseId);
-      if ("None" in courseOpt) {
-         res.status(400).send(`couldn't update a course with id=${courseId}. course not found`);
+   app.put("/moderator/:address", (req, res) => {
+      const address = req.params.address;
+      const result = addModerator(address);
+      if (result.type === 'Ok') {
+        res.json(result.value);
       } else {
-         const course = courseOpt.Some;
-         const updatedMessage = { ...course, ...req.body, updatedAt: getCurrentDate()};
-         courseStorage.insert(course.id, updatedMessage);
-         res.json(updatedMessage);
+        res.status(400).send(result.error);
       }
    });
 
