@@ -112,6 +112,17 @@ export default Server(() => {
     }
   });
 
+  // Remove moderator
+  app.put("/removeModerator/:address", (req, res) => {
+    const address: string = req.params.address;
+    const result = removeModerator(address);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  })
+
   // Ban user
   app.put("/ban/:address", (req, res) => {
     const address = req.params.address;
