@@ -26,6 +26,7 @@ class FilterPayload {
 
 const courseStorage = StableBTreeMap<string, Course>(0);
 let admin: string;
+let moderators: string[];
 
 export default Server(() => {
    const app = express();
@@ -85,7 +86,25 @@ function setAdmin(address: string): string {
     return "admin already set";
   }
   admin = address;
-  return "successful"
+  return admin;
+}
+
+function addModerator(address: string): string {
+  let caller = ic.caller().toString();
+
+  if(caller != admin ) {
+    return "not authorized";
+  }
+
+  if (moderators.length == 5) {
+    return "maximum number of moderators added";
+  }
+
+  if(address in moderators) {
+    return "moderator already added";
+  }
+
+  moderators.push(address);
 }
 
 function getCurrentDate() {
@@ -164,6 +183,7 @@ function filterCourses_And(payload: FilterPayload): Course[] | string {
   return courses;
 }
 
+// Either the course creator or the admin or a moderator can delete a course
 function delete_course(id: string): Course | string {
   let caller = ic.caller.toString();
   const courseOpt = courseStorage.get(id);
