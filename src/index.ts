@@ -89,6 +89,15 @@ export default Server(() => {
     }
   });
 
+  // View the admin
+  app.get("/admin", (req, res) => {
+    if (admin) {
+      res.json(admin);
+    } else {
+      res.status(500).send("admin not set");
+    }
+  });
+
   // Add admin
   app.put("/admin/:address", (req, res) => {
     const address = req.params.address;
