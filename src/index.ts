@@ -2,6 +2,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Server, StableBTreeMap, ic } from 'azle';
 import express from 'express';
+import { call } from 'azle/src/lib/ic/call';
 
 class Course {
    id: string;
@@ -45,6 +46,10 @@ export default Server(() => {
 
   // Add course
   app.post("/courses", (req, res) => {
+    const caller = ic.caller().toString();
+    if (bannedUsers.includes(caller)) {
+      res.status(400).send("Cannot add course. User is banned")
+    }
     const course: Course =  {
       id: uuidv4(), createdAt: getCurrentDate(),
       creatorAddress: ic.caller().toString(), ...req.body
@@ -201,6 +206,7 @@ function banUser(address: string): Result<string, string> {
     return Err("User has no courses, cannot ban");
   }
 }
+
 function getCurrentDate() {
    const timestamp = new Number(ic.time());
    return new Date(timestamp.valueOf() / 1000_000);
