@@ -2,7 +2,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Server, StableBTreeMap, ic } from 'azle';
 import express from 'express';
-import { call } from 'azle/src/lib/ic/call';
 
 class Course {
    id: string;
@@ -181,6 +180,7 @@ export default Server(() => {
   return app.listen();
 });
 
+// Administration functions
 // If not already initialized, only admin can change
 function setAdmin(address: string): Result<string, string> {
   let caller: string = ic.caller().toString();
@@ -272,11 +272,6 @@ function unBanUser(address: string): Result<string, string> {
   bannedUsers.splice(index);
   return Ok(address);
 
-}
-
-function getCurrentDate() {
-   const timestamp = new Number(ic.time());
-   return new Date(timestamp.valueOf() / 1000_000);
 }
 
 function filterCourses_OR(payload: FilterPayload): Result<Course[], string> {
@@ -411,4 +406,9 @@ function delete_all_courses(address: string): Result<string[], string> {
     } else {
       return Err("no courses for the address");
     }
+}
+
+function getCurrentDate() {
+  const timestamp = new Number(ic.time());
+  return new Date(timestamp.valueOf() / 1000_000);
 }
