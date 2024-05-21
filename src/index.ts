@@ -6,7 +6,7 @@ import express from 'express';
 
 class Course {
    id: string;
-   creator_name: string;
+   creatorName: string;
 //    creator_address: string; // Store the principal
    title: string;
    content: string;
@@ -16,6 +16,12 @@ class Course {
    contact: string;
    createdAt: Date;
    updatedAt: Date | null
+}
+
+class FilterPayload {
+  creatorName?: string;
+  category?: string;
+  keyword?: string;
 }
 
 const courseStorage = StableBTreeMap<string, Course>(0);
@@ -75,68 +81,73 @@ function getCurrentDate() {
    return new Date(timestamp.valueOf() / 1000_000);
 }
 
-function filterCourses_OR(payload) {
-    if (!payload.keyword && !payload.category && !payload.creatorAddress) {
-        return {
-          error: "Filter payload is empty; at least one filter criterion must be provided",
-        };
+function filterCourses_OR(payload: FilterPayload): Course[] | string {
+  if (!payload.keyword && !payload.category && !payload.creatorName) {
+      return "Filter payload is empty; at least one filter criterion must be provided";
+  }
+
+  // Create an empty array
+  const courses: Course[] = [];
+
+  // Returns array of tuple values of key and the value
+  let items = courseStorage.items();
+
+  // Using for of loop to iterate through the array
+  // Destructuring the two entries in each tuple
+  for(const [key, course] of items) {
+    let matches = false;
+    if (payload.keyword) {
+      matches = course.keyword == payload.keyword;
     }
-    const courses: Course[] = [];
-    courseStorage.forEach((course) => {
-        let matches = false;
-        if (payload.keyword) {
-          matches = course.keyword === payload.keyword;
-        }
-        if (payload.category) {
-          matches = matches || course.category === payload.category;
-        }
-        if (payload.creatorAddress) {
-          matches = matches || course.creatorAddress === payload.creatorAddress;
-        }
-        if (matches) {
-          courses.push(course);
-        }
-      });
-    
-      if (courses.length === 0) {
-        return {
-          error: "Couldn't find a course with provided inputs",
-        };
-      }
-    
-      return courses;
+    if (payload.category) {
+      matches = matches || course.category == payload.category;
+    }
+    if (payload.creatorName) {
+      matches = matches || course.creatorName == payload.creatorName;
+    }
+    if (matches) {
+      courses.push(course);
+    }
+  }
+
+  if (courses.length === 0) {
+    return "not found";
+  }
+    return courses;
 }
 
-function filterCourses_And(payload) {
-    // Add a separate function to check if payload is empty
-    if (!payload.keyword && !payload.category && !payload.creatorAddress) {
-      return {
-        error: "Filter payload is empty; at least one filter criterion must be provided",
-      };
-    }
-  
-    const courses: Course[] = [];
-    courseStorage.forEach((course) => {
-      let matches = true;
-      if (payload.keyword) {
-        matches = matches && course.keyword === payload.keyword;
-      }
-      if (payload.category) {
-        matches = matches && course.category === payload.category;
-      }
-      if (payload.creatorAddress) {
-        matches = matches && course.creatorAddress === payload.creatorAddress;
-      }
-      if (matches) {
-        courses.push(course);
-      }
-    });
-  
-    if (courses.length === 0) {
-      return {
-        error: "Couldn't find a course with provided inputs",
-      };
-    }
-  
-    return courses;
+function filterCourses_And(payload: FilterPayload): Course[] | string {
+  // Add a separate function to check if payload is empty
+  if (!payload.keyword && !payload.category && !payload.creatorName) {
+    return "Filter payload is empty; at least one filter criterion must be provided";
   }
+  
+  const courses: Course[] = [];
+  
+  // Returns array of tuple values of key and the value
+  let items = courseStorage.items();
+
+  // Using for of loop to iterate through the array
+  // Destructuring the two entries in each tuple
+  for(const[key, course] of items) {
+    let matches = true;
+    if (payload.keyword) {
+      matches = matches && course.keyword == payload.keyword;
+    }
+    if (payload.category) {
+      matches = matches && course.category == payload.category;
+    }
+    if (payload.creatorName) {
+      matches = matches && course.creatorName == payload.creatorName;
+    }
+    if (matches) {
+      courses.push(course);
+    }
+  }
+
+  if (courses.length === 0) {
+    return "No courses";
+  }
+
+  return courses;
+}
