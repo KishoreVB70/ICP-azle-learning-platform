@@ -105,6 +105,7 @@ function addModerator(address: string): string {
   }
 
   moderators.push(address);
+  return address;
 }
 
 function getCurrentDate() {
