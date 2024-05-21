@@ -102,10 +102,10 @@ export default Server(() => {
    app.delete("/courses/:id", (req, res) => {
       const courseId = req.params.id;
       const result = delete_course(courseId);
-      if (result == typeof(String)) {
-         res.status(400).send(`couldn't delete a course with id=${courseId}. course not found`);
+      if (result.type === 'Ok') {
+        res.json(result.value);
       } else {
-         res.json(result);
+        res.status(400).send(result.error);
       }
    });
 
@@ -221,18 +221,18 @@ function filterCourses_And(payload: FilterPayload): Course[] | string {
 }
 
 // Either the course creator or the admin or a moderator can delete a course
-function delete_course(id: string): Course | string {
+function delete_course(id: string): Result<Course,string> {
   let caller = ic.caller.toString();
   const courseOpt = courseStorage.get(id);
   if ("None" in courseOpt) {
-    return `Course with id=${id} not found`;
+    return Err(`Course with id=${id} not found`);
  } else {
     const course = courseOpt.Some;
     if (caller == admin || caller ==  course.creatorAddress) {
       courseStorage.remove(id);
-      return course;
+      return Ok(course);
     } else {
-      return `you are not authorized to delete course with id=${id}`;
+      return Err(`you are not authorized to delete course with id=${id}`);
     }
  }
 }
