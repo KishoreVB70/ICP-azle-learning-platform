@@ -107,8 +107,8 @@ export default Server(() => {
 
   // Delete course
   app.delete("/courses/:id", (req, res) => {
-    const courseId = req.params.id;
-    const result = delete_course(courseId);
+    const id = req.params.id;
+    const result = delete_course(id);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -118,7 +118,18 @@ export default Server(() => {
 
   // Delete all my courses course
   app.delete("/courses/", (req, res) => {
-    const result = delete_course(courseId);
+    const result = delete_my_courses();
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
+  // Delete all user courses
+  app.delete("/courses/:address", (req, res) => {
+    const address = req.params.address;
+    const result = delete_courses(address);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -237,6 +248,23 @@ function filterCourses_And(payload: FilterPayload): Course[] | string {
   return courses;
 }
 
+// Either the course creator or the admin or a moderator can update a course
+function update_course(id: string): Result<Course, string> {
+  let caller = ic.caller().toString();
+  const courseOpt = courseStorage.get(id);
+  if ("None" in courseOpt) {
+     return Err(`couldn't update a course with id=${id}. course not found`);
+  } else {
+     const course = courseOpt.Some;
+    if (caller == admin || moderators.includes(caller) || caller == course.creatorAddress ) {
+      return Ok(course)
+    } else {
+      return Err(`you are not authorized to update the course with id=${id}`)
+    }
+  }
+}
+
+
 // Either the course creator or the admin or a moderator can delete a course
 function delete_course(id: string): Result<Course,string> {
   let caller = ic.caller.toString();
@@ -254,8 +282,8 @@ function delete_course(id: string): Result<Course,string> {
   }
 }
 
-// Either the course creator or the admin or a moderator can delete a course
-function delete_my_course(): Result<String[],string> {
+
+function delete_my_courses(): Result<String[],string> {
   let caller = ic.caller.toString();
   let keysOfCaller: string[] = [];
   let items = courseStorage.items();
@@ -265,7 +293,6 @@ function delete_my_course(): Result<String[],string> {
       keysOfCaller.push(key)
     }
   }
-
   if (keysOfCaller.length > 0){
     for (let id of keysOfCaller) {
       courseStorage.remove(id);
@@ -276,18 +303,28 @@ function delete_my_course(): Result<String[],string> {
   }
 }
 
-// Either the course creator or the admin or a moderator can update a course
-function update_course(id: string): Result<Course, string> {
-  let caller = ic.caller().toString();
-  const courseOpt = courseStorage.get(id);
-  if ("None" in courseOpt) {
-     return Err(`couldn't update a course with id=${id}. course not found`);
-  } else {
-     const course = courseOpt.Some;
-    if (caller == admin || moderators.includes(caller) || caller == course.creatorAddress ) {
-      return Ok(course)
-    } else {
-      return Err(`you are not authorized to update the course with id=${id}`)
+// Either the course creator or the admin or a moderator can delete a course
+function delete_courses(address: string): Result<string[], string> {
+  let caller = ic.caller.toString();
+  if (caller == admin || moderators.includes(caller) || caller ==  address) {
+    let keysOfAddress: string[] = [];
+    let items = courseStorage.items();
+  
+    for (const [key, course] of items) {
+      if (course.creatorAddress == address) {
+        keysOfAddress.push(key)
+      }
     }
+    if (keysOfAddress.length > 0){
+      for (let id of keysOfAddress) {
+        courseStorage.remove(id);
+      }
+      return Ok(keysOfAddress);
+    } else {
+      return Err("no courses for the address");
+    }
+  } else {
+    return Err(`you are not authorized to delete courses for the address=${address}`);
   }
 }
+
