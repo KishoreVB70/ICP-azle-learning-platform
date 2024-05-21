@@ -46,6 +46,8 @@ export default Server(() => {
 
   // Add course
   app.post("/courses", (req, res) => {
+
+    // Check if the user is banned
     const caller = ic.caller().toString();
     if (bannedUsers.includes(caller)) {
       res.status(400).send("Cannot add course. User is banned")
@@ -121,6 +123,17 @@ export default Server(() => {
     }
   });
 
+  // Unban user
+  app.put("/unban/:address", (req, res) => {
+    const address = req.params.address;
+    const result = unBanUser(address);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
   // Delete course
   app.delete("/courses/:id", (req, res) => {
     const id = req.params.id;
@@ -189,6 +202,7 @@ function addModerator(address: string): Result<string, string> {
   return Ok(address);
 }
 
+
 function banUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
   if (
@@ -205,6 +219,26 @@ function banUser(address: string): Result<string, string> {
   } else {
     return Err("User has no courses, cannot ban");
   }
+}
+
+// can add is authorized helper function
+function unBanUser(address: string): Result<string, string> {
+  const caller = ic.caller.toString();
+  if (
+    caller != admin || !moderators.includes(caller) 
+  ) {
+    return Err("you are not authorized to unban the user")
+  }
+
+  if(!bannedUsers.includes(address)) {
+    return Err("User is not banned");
+  }
+
+  // Remove user from the list of banned users
+  const index = bannedUsers.indexOf(address);
+  bannedUsers.splice(index);
+  return Ok(address);
+
 }
 
 function getCurrentDate() {
