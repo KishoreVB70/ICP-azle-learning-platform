@@ -89,6 +89,16 @@ export default Server(() => {
       }
    });
 
+   app.put("/admin/:address", (req, res) => {
+      const address = req.params.address;
+      const result = setAdmin(address);
+      if (result.type === 'Ok') {
+        res.json(result.value);
+      } else {
+        res.status(400).send(result.error);
+      }
+   });
+
    app.delete("/courses/:id", (req, res) => {
       const courseId = req.params.id;
       const result = delete_course(courseId);
@@ -102,6 +112,18 @@ export default Server(() => {
    return app.listen();
 });
 
+function setAdmin(address: string): Result<string, string> {
+  let caller: string = ic.caller().toString();
+  if (admin) {
+    if(caller == admin ) {
+      admin = address;
+      return Ok(address);
+    }
+    return Err("not authorized");
+  }
+  admin = address;
+  return Ok(address);
+}
 
 function addModerator(address: string): Result<string, string> {
   let caller = ic.caller().toString();
