@@ -34,7 +34,7 @@ function Err<E>(error: E): Result<never, E> {
   return { type: 'Err', error };
 }
 
-
+// Conver them into persistent memory
 const courseStorage = StableBTreeMap<string, Course>(0);
 let admin: string;
 let moderators: string[];
@@ -108,6 +108,16 @@ export default Server(() => {
   // Delete course
   app.delete("/courses/:id", (req, res) => {
     const courseId = req.params.id;
+    const result = delete_course(courseId);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
+  // Delete all my courses course
+  app.delete("/courses/", (req, res) => {
     const result = delete_course(courseId);
     if (result.type === 'Ok') {
       res.json(result.value);
@@ -244,6 +254,29 @@ function delete_course(id: string): Result<Course,string> {
   }
 }
 
+// Either the course creator or the admin or a moderator can delete a course
+function delete_my_course(): Result<String[],string> {
+  let caller = ic.caller.toString();
+  let keysOfCaller: string[] = [];
+  let items = courseStorage.items();
+
+  for (const [key, course] of items) {
+    if (course.creatorAddress == caller) {
+      keysOfCaller.push(key)
+    }
+  }
+
+  if (keysOfCaller.length > 0){
+    for (let id of keysOfCaller) {
+      courseStorage.remove(id);
+    }
+    return Ok(keysOfCaller);
+  } else {
+    return Err("no courses for the caller");
+  }
+}
+
+// Either the course creator or the admin or a moderator can update a course
 function update_course(id: string): Result<Course, string> {
   let caller = ic.caller().toString();
   const courseOpt = courseStorage.get(id);
