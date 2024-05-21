@@ -35,8 +35,8 @@ function Err<E>(error: E): Result<never, E> {
 
 // Conver them into persistent memory
 const courseStorage = StableBTreeMap<string, Course>(0);
+const moderatorsStorage =  StableBTreeMap<string, string>(1);
 let admin: string;
-let moderators: string[];
 let bannedUsers: string[];
 
 export default Server(() => {
@@ -203,15 +203,23 @@ function addModerator(address: string): Result<string, string> {
     return Err("not authorized");
   }
 
+  // Returns array of tuple containing key and values
+  let moderators = moderatorsStorage.items();
+
+  // Maximum number of moderators = 5
   if (moderators.length == 5) {
     return Err("maximum number of moderators added");
   }
 
-  if(address in moderators) {
-    return Err("moderator already added");
+  // Check if moderator already present
+  for ( const [key, value] of moderators) {
+    if (value == address) {
+      return Err("moderator already added")
+    }
   }
 
-  moderators.push(address);
+  // Add moderator into storage
+  moderatorsStorage.insert(uuidv4(), address);
   return Ok(address);
 }
 
@@ -222,12 +230,19 @@ function removeModerator(address: string): Result<string, string> {
     return Err("You are not authorized to remove a moderator");
   }
 
-  if(!moderators.includes(address)){
+  let moderators = moderatorsStorage.items();
+  let is_moderator: boolean = false;
+  for (const [key, value] of moderators) {
+    if (value == address) {
+      is_moderator = true;
+    }
+  }
+
+  if(!is_moderator){
     return Err("Provided address is not a moderator");
   }
 
-  const index = moderators.indexOf(address);
-  moderators.splice(index);
+  moderatorsStorage.remove(address);
   return Ok(address);
 }
 
