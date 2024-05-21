@@ -69,11 +69,11 @@ export default Server(() => {
 
    app.delete("/courses/:id", (req, res) => {
       const courseId = req.params.id;
-      const deletedMessage = courseStorage.remove(courseId);
-      if ("None" in deletedMessage) {
+      const result = delete_course(courseId);
+      if (result == typeof(String)) {
          res.status(400).send(`couldn't delete a course with id=${courseId}. course not found`);
       } else {
-         res.json(deletedMessage.Some);
+         res.json(result);
       }
    });
 
@@ -162,4 +162,20 @@ function filterCourses_And(payload: FilterPayload): Course[] | string {
   }
 
   return courses;
+}
+
+function delete_course(id: string): Course | string {
+  let caller = ic.caller.toString();
+  const courseOpt = courseStorage.get(id);
+  if ("None" in courseOpt) {
+    return `Course with id=${id} not found`;
+ } else {
+    const course = courseOpt.Some;
+    if (caller == admin || caller ==  course.creatorAddress) {
+      courseStorage.remove(id);
+      return course;
+    } else {
+      return `you are not authorized to delete course with id=${id}`;
+    }
+ }
 }
