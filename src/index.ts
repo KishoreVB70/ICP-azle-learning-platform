@@ -48,7 +48,7 @@ export default Server(() => {
 
     // Check if the user is banned
     const caller = ic.caller().toString();
-    if (bannedUsers.includes(caller)) {
+    if (is_banned(caller)) {
       res.status(400).send("Cannot add course. User is banned")
     }
     const course: Course =  {
@@ -314,6 +314,16 @@ function unBanUser(address: string): Result<string, string> {
   bannedUsersStorage.remove(id);
   return Ok(address);
 
+}
+
+function is_banned(address: string): bool {
+  const bannedUsers = bannedUsersStorage.items();
+  for (const [key, value] of bannedUsers) {
+    if (value == address) {
+      return true
+    }
+  }
+  return false;
 }
 
 function filterCourses_OR(payload: FilterPayload): Result<Course[], string> {
