@@ -24,6 +24,17 @@ class FilterPayload {
   keyword?: string;
 }
 
+type Result<T, E> = { type: 'Ok'; value: T } | { type: 'Err'; error: E };
+
+function Ok<T>(value: T): Result<T, never> {
+  return { type: 'Ok', value };
+}
+
+function Err<E>(error: E): Result<never, E> {
+  return { type: 'Err', error };
+}
+
+
 const courseStorage = StableBTreeMap<string, Course>(0);
 let admin: string;
 let moderators: string[];
@@ -68,6 +79,19 @@ export default Server(() => {
       }
    });
 
+   app.put("/courses/:id", (req, res) => {
+      const courseId = req.params.id;
+      const courseOpt = courseStorage.get(courseId);
+      if ("None" in courseOpt) {
+         res.status(400).send(`couldn't update a course with id=${courseId}. course not found`);
+      } else {
+         const course = courseOpt.Some;
+         const updatedMessage = { ...course, ...req.body, updatedAt: getCurrentDate()};
+         courseStorage.insert(course.id, updatedMessage);
+         res.json(updatedMessage);
+      }
+   });
+
    app.delete("/courses/:id", (req, res) => {
       const courseId = req.params.id;
       const result = delete_course(courseId);
@@ -82,23 +106,23 @@ export default Server(() => {
 });
 
 
-function addModerator(address: string): string {
+function addModerator(address: string): Result<string, string> {
   let caller = ic.caller().toString();
 
   if(caller != admin ) {
-    return "not authorized";
+    return Err("not authorized");
   }
 
   if (moderators.length == 5) {
-    return "maximum number of moderators added";
+    return Err("maximum number of moderators added");
   }
 
   if(address in moderators) {
-    return "moderator already added";
+    return Err("moderator already added");
   }
 
   moderators.push(address);
-  return address;
+  return Ok(address);
 }
 
 function getCurrentDate() {
