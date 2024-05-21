@@ -7,7 +7,7 @@ import express from 'express';
 class Course {
    id: string;
    creatorName: string;
-//    creator_address: string; // Store the principal
+   creatorAddress: string; // Store the principal
    title: string;
    content: string;
    attachmentURL: string;
@@ -31,7 +31,10 @@ export default Server(() => {
    app.use(express.json());
 
    app.post("/courses", (req, res) => {
-      const course: Course =  {id: uuidv4(), createdAt: getCurrentDate(), ...req.body};
+      const course: Course =  {
+        id: uuidv4(), createdAt: getCurrentDate(),
+        creatorAddress: ic.caller().toString(), ...req.body
+      };
       courseStorage.insert(course.id, course);
       res.json(course);
    });
