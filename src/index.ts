@@ -289,7 +289,7 @@ function banUser(address: string): Result<string, string> {
 function unBanUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
   if (
-    caller != admin || !moderators.includes(caller) 
+    caller != admin || !is_moderator(caller) 
   ) {
     return Err("you are not authorized to unban the user")
   }
@@ -384,7 +384,7 @@ function update_course(id: string): Result<Course, string> {
      return Err(`couldn't update a course with id=${id}. course not found`);
   } else {
      const course = courseOpt.Some;
-    if (caller == admin || moderators.includes(caller) || caller == course.creatorAddress ) {
+    if (caller == admin || is_moderator(caller) || caller == course.creatorAddress ) {
       return Ok(course)
     } else {
       return Err(`you are not authorized to update the course with id=${id}`)
@@ -412,7 +412,7 @@ function delete_course(id: string): Result<Course,string> {
 // Either the course creator or the admin or a moderator can delete a course
 function delete_courses(address: string): Result<string[], string> {
   let caller = ic.caller.toString();
-  if (caller == admin || moderators.includes(caller) || caller ==  address) {
+  if (caller == admin || is_moderator(caller) || caller ==  address) {
     return delete_all_courses(address);
   } else {
     return Err(`you are not authorized to delete courses for the address=${address}`);
