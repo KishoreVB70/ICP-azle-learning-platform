@@ -46,6 +46,19 @@ export default Server(() => {
 
   // Add course
   app.post("/courses", (req, res) => {
+    const { 
+      title, content, creatorName, 
+      attachmentURL, category, keyword, contact 
+    } = req.body;
+
+    // Input validation
+    if (
+      !title || !content || !creatorName || 
+      !attachmentURL || !category || !keyword || !contact
+    ) {
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
+    }
 
     // Check if the user is banned
     const caller = ic.caller().toString();
@@ -408,6 +421,7 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
     return Err("Filter payload is empty; at least one filter criterion must be provided");
   }
   
+  //Empty array for courses
   const courses: Course[] = [];
   
   // Returns array of courses
