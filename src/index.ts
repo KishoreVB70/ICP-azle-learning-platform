@@ -60,15 +60,29 @@ export default Server(() => {
   });
 
 
-  app.get('/courses/filteror', (req, res) => {
+  app.get('/courses/filter', (req, res) => {
+    const filterType = req.query.filterType as string;
+    if(!filterType) {
+      res.status(400).send("Provide filter type AND OR");
+      return;
+    }
+
     const payload: FilterPayload = {
       keyword: req.query.keyword as string,
       category: req.query.category as string,
       creatorName: req.query.creatorName as string
     };
 
-    // Call the filter function
-    const result = filterCourses_OR(payload);
+    let result: Result<Course[], string>;
+
+    if (filterType.toUpperCase() == 'AND') {
+      result = filterCourses_And(payload);
+    } else if (filterType.toUpperCase() == 'OR') {
+      result = filterCourses_OR(payload);
+    } else {
+      res.status(400).send("filter type must be either AND or OR");
+      return;
+    }
 
     if (result.type === 'Ok') {
       res.json(result.value);
@@ -76,24 +90,6 @@ export default Server(() => {
       res.status(400).send(result.error);
     }
   });
-
-  app.get('/courses/filterand', (req, res) => {
-    const payload: FilterPayload = {
-      keyword: req.query.keyword as string,
-      category: req.query.category as string,
-      creatorName: req.query.creatorName as string
-    };
-
-    // Call the filter function
-    const result = filterCourses_And(payload);
-
-    if (result.type === 'Ok') {
-      res.json(result.value);
-    } else {
-      res.status(400).send(result.error);
-    }
-  });
-
 
   // Get all courses
   app.get("/courses", (req, res) => {
