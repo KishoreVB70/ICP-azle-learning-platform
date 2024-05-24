@@ -5,7 +5,7 @@ import express from 'express';
 
 class Course {
    id: string;
-   creatorAddress: string; // Store the principal
+   creatorAddress: string; // Store the principal of the creator
    creatorName: string;
    title: string;
    content: string;
@@ -17,6 +17,7 @@ class Course {
    updatedAt: Date | null
 }
 
+// To obtain information for filtering the courses
 type FilterPayload = {
   creatorName?: string;
   category?: string;
@@ -121,6 +122,39 @@ export default Server(() => {
     }
   });
 
+    // Delete course based on the id
+    app.delete("/courses/:id", (req, res) => {
+      const id = req.params.id;
+      const result = delete_course(id);
+      if (result.type === 'Ok') {
+        res.json(result.value);
+      } else {
+        res.status(400).send(result.error);
+      }
+    });
+  
+    // Delete all the user courses courses course
+    app.delete("/courses/", (req, res) => {
+      let caller: string = ic.caller.toString();
+      const result = delete_all_courses(caller);
+      if (result.type === 'Ok') {
+        res.json(result.value);
+      } else {
+        res.status(400).send(result.error);
+      }
+    });
+  
+    // Delete all the courses of the address 
+    app.delete("/courses/:address", (req, res) => {
+      const address = req.params.address;
+      const result = delete_courses(address);
+      if (result.type === 'Ok') {
+        res.json(result.value);
+      } else {
+        res.status(400).send(result.error);
+      }
+    });
+
   // View the admin
   app.get("/admin", (req, res) => {
     if (admin) {
@@ -130,7 +164,7 @@ export default Server(() => {
     }
   });
 
-  // Add admin
+  // Set admin
   app.put("/admin/:address", (req, res) => {
     const address = req.params.address;
     const result = setAdmin(address);
@@ -178,39 +212,6 @@ export default Server(() => {
   app.put("/unban/:address", (req, res) => {
     const address = req.params.address;
     const result = unBanUser(address);
-    if (result.type === 'Ok') {
-      res.json(result.value);
-    } else {
-      res.status(400).send(result.error);
-    }
-  });
-
-  // Delete course
-  app.delete("/courses/:id", (req, res) => {
-    const id = req.params.id;
-    const result = delete_course(id);
-    if (result.type === 'Ok') {
-      res.json(result.value);
-    } else {
-      res.status(400).send(result.error);
-    }
-  });
-
-  // Delete all my courses course
-  app.delete("/courses/", (req, res) => {
-    let caller: string = ic.caller.toString();
-    const result = delete_all_courses(caller);
-    if (result.type === 'Ok') {
-      res.json(result.value);
-    } else {
-      res.status(400).send(result.error);
-    }
-  });
-
-  // Delete all user courses
-  app.delete("/courses/:address", (req, res) => {
-    const address = req.params.address;
-    const result = delete_courses(address);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -375,12 +376,12 @@ function filterCourses_OR(payload: FilterPayload): Result<Course[], string> {
   // Create an empty array
   const courses: Course[] = [];
 
-  // Returns array of tuple values of key and the value
-  let items = courseStorage.items();
+  // Returns array of all the courses
+  let values = courseStorage.values();
 
   // Using for of loop to iterate through the array
   // Destructuring the two entries in each tuple
-  for(const [key, course] of items) {
+  for(const course of values) {
     let matches = false;
     if (payload.keyword) {
       matches = course.keyword == payload.keyword;
