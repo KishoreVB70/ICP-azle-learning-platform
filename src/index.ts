@@ -17,11 +17,11 @@ class Course {
    updatedAt: Date | null
 }
 
-class FilterPayload {
+type FilterPayload = {
   creatorName?: string;
   category?: string;
   keyword?: string;
-}
+};
 
 type Result<T, E> = { type: 'Ok'; value: T } | { type: 'Err'; error: E };
 
@@ -57,6 +57,33 @@ export default Server(() => {
     };
     courseStorage.insert(course.id, course);
     res.json(course);
+  });
+
+
+  app.post('/courses/filteror', (req, res) => {
+    const payload: FilterPayload = req.body;
+
+    // Call the filter function
+    const result = filterCourses_OR(payload);
+
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
+  app.post('/courses/filterand', (req, res) => {
+    const payload: FilterPayload = req.body;
+
+    // Call the filter function
+    const result = filterCourses_And(payload);
+
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
   });
 
   // Get all courses
