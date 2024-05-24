@@ -135,38 +135,38 @@ export default Server(() => {
     }
   });
 
-    // Delete course based on the id
-    app.delete("/courses/:id", (req, res) => {
-      const id = req.params.id;
-      const result = delete_course(id);
-      if (result.type === 'Ok') {
-        res.json(result.value);
-      } else {
-        res.status(400).send(result.error);
-      }
-    });
-  
-    // Delete all the user courses courses course
-    app.delete("/courses/", (req, res) => {
-      let caller: string = ic.caller.toString();
-      const result = delete_all_courses(caller);
-      if (result.type === 'Ok') {
-        res.json(result.value);
-      } else {
-        res.status(400).send(result.error);
-      }
-    });
-  
-    // Delete all the courses of the address 
-    app.delete("/courses/:address", (req, res) => {
-      const address = req.params.address;
-      const result = delete_courses(address);
-      if (result.type === 'Ok') {
-        res.json(result.value);
-      } else {
-        res.status(400).send(result.error);
-      }
-    });
+  // Delete course based on the id
+  app.delete("/courses/:id", (req, res) => {
+    const id = req.params.id;
+    const result = delete_course(id);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
+  // Delete all the user courses courses course
+  app.delete("/courses/", (req, res) => {
+    let caller: string = ic.caller.toString();
+    const result = delete_all_courses(caller);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
+  // Delete all the courses of the address 
+  app.delete("/courses/:address", (req, res) => {
+    const address = req.params.address;
+    const result = delete_courses(address);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
 
   // View the admin
   app.get("/admin", (req, res) => {
