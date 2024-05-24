@@ -60,8 +60,12 @@ export default Server(() => {
   });
 
 
-  app.post('/courses/filteror', (req, res) => {
-    const payload: FilterPayload = req.body;
+  app.get('/courses/filteror', (req, res) => {
+    const payload: FilterPayload = {
+      keyword: req.query.keyword as string,
+      category: req.query.category as string,
+      creatorName: req.query.creatorName as string
+    };
 
     // Call the filter function
     const result = filterCourses_OR(payload);
@@ -73,8 +77,12 @@ export default Server(() => {
     }
   });
 
-  app.post('/courses/filterand', (req, res) => {
-    const payload: FilterPayload = req.body;
+  app.get('/courses/filterand', (req, res) => {
+    const payload: FilterPayload = {
+      keyword: req.query.keyword as string,
+      category: req.query.category as string,
+      creatorName: req.query.creatorName as string
+    };
 
     // Call the filter function
     const result = filterCourses_And(payload);
@@ -85,6 +93,7 @@ export default Server(() => {
       res.status(400).send(result.error);
     }
   });
+
 
   // Get all courses
   app.get("/courses", (req, res) => {
