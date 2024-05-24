@@ -380,7 +380,6 @@ function filterCourses_OR(payload: FilterPayload): Result<Course[], string> {
   let values = courseStorage.values();
 
   // Using for of loop to iterate through the array
-  // Destructuring the two entries in each tuple
   for(const course of values) {
     let matches = false;
     if (payload.keyword) {
@@ -411,12 +410,12 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
   
   const courses: Course[] = [];
   
-  // Returns array of tuple values of key and the value
-  let items = courseStorage.items();
+  // Returns array of courses
+  let values = courseStorage.values();
 
   // Using for of loop to iterate through the array
   // Destructuring the two entries in each tuple
-  for(const[key, course] of items) {
+  for(const course of values) {
     let matches = true;
     if (payload.keyword) {
       matches = matches && course.keyword == payload.keyword;
