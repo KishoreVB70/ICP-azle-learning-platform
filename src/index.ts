@@ -313,14 +313,13 @@ function removeModerator(address: string): Result<string, string> {
 }
 
 function is_moderator(address: string): bool {
-  const moderators = moderatorsStorage.items();
-  for (const [key, value] of moderators) {
+  const moderators = moderatorsStorage.values();
+  for (const value of moderators) {
     if (value == address) {
-      return true;
+      return true
     }
   }
-  return false;
-
+  return false
 }
 
 // Either admin or a moderator can access
