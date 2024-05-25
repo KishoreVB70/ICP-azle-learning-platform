@@ -38,7 +38,7 @@ function Err<E>(error: E): Result<never, E> {
 const courseStorage = StableBTreeMap<string, Course>(0);
 const moderatorsStorage =  StableBTreeMap<string, string>(1);
 const bannedUsersStorage = StableBTreeMap<string, string>(2);
-let admin: string;
+const admin = StableBTreeMap<string, string>(3);
 
 export default Server(() => {
   const app = express();
@@ -239,14 +239,17 @@ export default Server(() => {
 // If not already initialized, only admin can change
 function setAdmin(address: string): Result<string, string> {
   let caller: string = ic.caller().toString();
-  if (admin) {
-    if(caller == admin ) {
-      admin = address;
+  const items = admin.items();
+  if (items.length > 0) {
+    const [key, value] = items[0];
+    if(caller === value) {
+      admin.remove(key);
+      admin.insert(uuidv4(),address);
       return Ok(address);
     }
     return Err("not authorized");
   }
-  admin = address;
+  admin.insert(uuidv4(),address);
   return Ok(address);
 }
 
@@ -254,12 +257,14 @@ function setAdmin(address: string): Result<string, string> {
 function addModerator(address: string): Result<string, string> {
   let caller = ic.caller().toString();
 
-  if(caller != admin ) {
+  let values = admin.values()
+
+  if(caller != values[0] ) {
     return Err("not authorized");
   }
 
   // Returns array of tuple containing key and values
-  let moderators = moderatorsStorage.items();
+  let moderators = moderatorsStorage.values();
 
   // Maximum number of moderators = 5
   if (moderators.length == 5) {
@@ -267,7 +272,7 @@ function addModerator(address: string): Result<string, string> {
   }
 
   // Check if moderator already present
-  for ( const [key, value] of moderators) {
+  for ( const value of moderators) {
     if (value == address) {
       return Err("moderator already added")
     }
