@@ -38,7 +38,7 @@ function Err<E>(error: E): Result<never, E> {
 const courseStorage = StableBTreeMap<string, Course>(0);
 const moderatorsStorage =  StableBTreeMap<string, string>(1);
 const bannedUsersStorage = StableBTreeMap<string, string>(2);
-const admin = StableBTreeMap<string, string>(3);
+const AdminStorage = StableBTreeMap<string, string>(3);
 
 export default Server(() => {
   const app = express();
@@ -170,8 +170,9 @@ export default Server(() => {
 
   // View the admin
   app.get("/admin", (req, res) => {
-    if (admin) {
-      res.json(admin);
+    const adminValues = AdminStorage.values()
+    if (adminValues.length > 0) {
+      res.json(adminValues[0]);
     } else {
       res.status(500).send("admin not set");
     }
@@ -239,17 +240,17 @@ export default Server(() => {
 // If not already initialized, only admin can change
 function setAdmin(address: string): Result<string, string> {
   let caller: string = ic.caller().toString();
-  const items = admin.items();
+  const items = AdminStorage.items();
   if (items.length > 0) {
     const [key, value] = items[0];
     if(caller === value) {
-      admin.remove(key);
-      admin.insert(uuidv4(),address);
+      AdminStorage.remove(key);
+      AdminStorage.insert(uuidv4(),address);
       return Ok(address);
     }
     return Err("not authorized");
   }
-  admin.insert(uuidv4(),address);
+  AdminStorage.insert(uuidv4(),address);
   return Ok(address);
 }
 
@@ -257,7 +258,7 @@ function setAdmin(address: string): Result<string, string> {
 function addModerator(address: string): Result<string, string> {
   let caller = ic.caller().toString();
 
-  let values = admin.values()
+  let values = AdminStorage.values()
 
   if(caller != values[0] ) {
     return Err("not authorized");
@@ -286,7 +287,7 @@ function addModerator(address: string): Result<string, string> {
 // Remove a moderator -> only admin can call
 function removeModerator(address: string): Result<string, string> {
   const caller = ic.caller().toString();
-  const value = admin.values();
+  const value = AdminStorage.values();
   if(caller != value[0]) {
     return Err("You are not authorized to remove a moderator");
   }
@@ -325,7 +326,7 @@ function is_moderator(address: string): bool {
 // Either admin or a moderator can access
 function banUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
-  const adminValues = admin.values();
+  const adminValues = AdminStorage.values();
   if (
     // Check whether the user is authorized
     caller != adminValues[0] || !is_moderator(caller) ||
@@ -349,7 +350,7 @@ function banUser(address: string): Result<string, string> {
 // can add is authorized helper function
 function unBanUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
-  let values = admin.values();
+  let values = AdminStorage.values();
   if (
     caller != values[0] || !is_moderator(caller) 
   ) {
@@ -467,7 +468,7 @@ function update_course(id: string): Result<Course, string> {
      return Err(`couldn't update a course with id=${id}. course not found`);
   } else {
      const course = courseOpt.Some;
-     const adminValues = admin.values();
+     const adminValues = AdminStorage.values();
     if (caller == adminValues[0] || is_moderator(caller) || caller == course.creatorAddress ) {
       return Ok(course)
     } else {
@@ -484,7 +485,7 @@ function delete_course(id: string): Result<Course,string> {
     return Err(`Course with id=${id} not found`);
   } else {
       const course = courseOpt.Some;
-      const adminValues = admin.values();
+      const adminValues = AdminStorage.values();
       if (caller == adminValues[0] || caller ==  course.creatorAddress) {
         courseStorage.remove(id);
         return Ok(course);
@@ -497,7 +498,7 @@ function delete_course(id: string): Result<Course,string> {
 // Either the course creator or the admin or a moderator can delete a course
 function delete_courses(address: string): Result<string[], string> {
   let caller = ic.caller.toString();
-  const adminValues = admin.values();
+  const adminValues = AdminStorage.values();
   if (caller == adminValues[0] || is_moderator(caller) || caller ==  address) {
     return delete_all_courses(address);
   } else {
