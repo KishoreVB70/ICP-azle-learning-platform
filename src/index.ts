@@ -286,7 +286,8 @@ function addModerator(address: string): Result<string, string> {
 // Remove a moderator -> only admin can call
 function removeModerator(address: string): Result<string, string> {
   const caller = ic.caller().toString();
-  if(caller != admin) {
+  const value = admin.values();
+  if(caller != value[0]) {
     return Err("You are not authorized to remove a moderator");
   }
 
