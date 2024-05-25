@@ -325,12 +325,13 @@ function is_moderator(address: string): bool {
 // Either admin or a moderator can access
 function banUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
+  const adminValues = admin.values();
   if (
     // Check whether the user is authorized
-    caller != admin || !is_moderator(caller) ||
+    caller != adminValues[0] || !is_moderator(caller) ||
 
     // Check if the address to be banned is a moderator or admin
-    address == admin || is_moderator(address)
+    address == adminValues[0] || is_moderator(address)
   ) {
     return Err("you are not authorized to ban the user")
   }
@@ -348,8 +349,9 @@ function banUser(address: string): Result<string, string> {
 // can add is authorized helper function
 function unBanUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
+  let values = admin.values();
   if (
-    caller != admin || !is_moderator(caller) 
+    caller != values[0] || !is_moderator(caller) 
   ) {
     return Err("you are not authorized to unban the user")
   }
@@ -465,7 +467,8 @@ function update_course(id: string): Result<Course, string> {
      return Err(`couldn't update a course with id=${id}. course not found`);
   } else {
      const course = courseOpt.Some;
-    if (caller == admin || is_moderator(caller) || caller == course.creatorAddress ) {
+     const adminValues = admin.values();
+    if (caller == adminValues[0] || is_moderator(caller) || caller == course.creatorAddress ) {
       return Ok(course)
     } else {
       return Err(`you are not authorized to update the course with id=${id}`)
@@ -481,7 +484,8 @@ function delete_course(id: string): Result<Course,string> {
     return Err(`Course with id=${id} not found`);
   } else {
       const course = courseOpt.Some;
-      if (caller == admin || caller ==  course.creatorAddress) {
+      const adminValues = admin.values();
+      if (caller == adminValues[0] || caller ==  course.creatorAddress) {
         courseStorage.remove(id);
         return Ok(course);
       } else {
@@ -493,7 +497,8 @@ function delete_course(id: string): Result<Course,string> {
 // Either the course creator or the admin or a moderator can delete a course
 function delete_courses(address: string): Result<string[], string> {
   let caller = ic.caller.toString();
-  if (caller == admin || is_moderator(caller) || caller ==  address) {
+  const adminValues = admin.values();
+  if (caller == adminValues[0] || is_moderator(caller) || caller ==  address) {
     return delete_all_courses(address);
   } else {
     return Err(`you are not authorized to delete courses for the address=${address}`);
