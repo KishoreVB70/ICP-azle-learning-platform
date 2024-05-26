@@ -179,6 +179,8 @@ export default Server(() => {
     }
   });
 
+  app.get("./moderators")
+
   // Set admin
   app.put("/admin/:address", (req, res) => {
     const address = req.params.address;
@@ -190,8 +192,9 @@ export default Server(() => {
     }
   });
 
+
   // Add moderator
-  app.put("/moderator/:address", (req, res) => {
+  app.put("/moderators/:address", (req, res) => {
     const address = req.params.address;
     const result = addModerator(address);
     if (result.type === 'Ok') {
@@ -202,7 +205,7 @@ export default Server(() => {
   });
 
   // Remove moderator
-  app.put("/removeModerator/:address", (req, res) => {
+  app.delete("/moderators/:address", (req, res) => {
     const address: string = req.params.address;
     const result = removeModerator(address);
     if (result.type === 'Ok') {
@@ -224,7 +227,7 @@ export default Server(() => {
   });
 
   // Unban user
-  app.put("/unban/:address", (req, res) => {
+  app.delete("/ban/:address", (req, res) => {
     const address = req.params.address;
     const result = unBanUser(address);
     if (result.type === 'Ok') {
