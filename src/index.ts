@@ -105,9 +105,9 @@ export default Server(() => {
 
     let result: Result<Course[], string>;
 
-    if (filterType.toUpperCase() == 'AND') {
+    if (filterType.toUpperCase() === 'AND') {
       result = filterCourses_And(payload);
-    } else if (filterType.toUpperCase() == 'OR') {
+    } else if (filterType.toUpperCase() === 'OR') {
       result = filterCourses_OR(payload);
     } else {
       res.status(400).send("filter type must be either AND or OR");
@@ -268,13 +268,13 @@ function addModerator(address: string): Result<string, string> {
   let moderators = moderatorsStorage.values();
 
   // Maximum number of moderators = 5
-  if (moderators.length == 5) {
+  if (moderators.length === 5) {
     return Err("maximum number of moderators added");
   }
 
   // Check if moderator already present
   for ( const value of moderators) {
-    if (value == address) {
+    if (value === address) {
       return Err("moderator already added")
     }
   }
@@ -298,7 +298,7 @@ function removeModerator(address: string): Result<string, string> {
   // Obtain the id of the address
   let id: string = "";
   for (const [key, value] of moderators) {
-    if (value == address) {
+    if (value === address) {
       is_moderator = true;
       id = key;
       break;
@@ -316,7 +316,7 @@ function removeModerator(address: string): Result<string, string> {
 function is_moderator(address: string): bool {
   const moderators = moderatorsStorage.values();
   for (const value of moderators) {
-    if (value == address) {
+    if (value === address) {
       return true
     }
   }
@@ -332,7 +332,7 @@ function banUser(address: string): Result<string, string> {
     caller != adminValues[0] || !is_moderator(caller) ||
 
     // Check if the address to be banned is a moderator or admin
-    address == adminValues[0] || is_moderator(address)
+    address === adminValues[0] || is_moderator(address)
   ) {
     return Err("you are not authorized to ban the user")
   }
@@ -363,7 +363,7 @@ function unBanUser(address: string): Result<string, string> {
   let id: string = ""
 
   for (const [key, value] of bannedUsers) {
-    if (value == address) {
+    if (value === address) {
       is_banned = true;
       id = key;
     }
@@ -382,7 +382,7 @@ function unBanUser(address: string): Result<string, string> {
 function is_banned(address: string): bool {
   const bannedUsers = bannedUsersStorage.values();
   for (const value of bannedUsers) {
-    if (value == address) {
+    if (value === address) {
       return true
     }
   }
@@ -404,13 +404,13 @@ function filterCourses_OR(payload: FilterPayload): Result<Course[], string> {
   for(const course of values) {
     let matches = false;
     if (payload.keyword) {
-      matches = course.keyword == payload.keyword;
+      matches = course.keyword.toUpperCase() === payload.keyword.toUpperCase();
     }
     if (payload.category) {
-      matches = matches || course.category == payload.category;
+      matches = matches || course.category.toUpperCase() === payload.category.toUpperCase();
     }
     if (payload.creatorName) {
-      matches = matches || course.creatorName == payload.creatorName;
+      matches = matches || course.creatorName.toUpperCase() == payload.creatorName.toUpperCase();
     }
     if (matches) {
       courses.push(course);
@@ -440,13 +440,13 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
   for(const course of values) {
     let matches = true;
     if (payload.keyword) {
-      matches = matches && course.keyword == payload.keyword;
+      matches = matches && course.keyword.toUpperCase() == payload.keyword.toUpperCase();
     }
     if (payload.category) {
-      matches = matches && course.category == payload.category;
+      matches = matches && course.category.toUpperCase() == payload.category.toUpperCase();
     }
     if (payload.creatorName) {
-      matches = matches && course.creatorName == payload.creatorName;
+      matches = matches && course.creatorName.toUpperCase() == payload.creatorName.toUpperCase();
     }
     if (matches) {
       courses.push(course);
