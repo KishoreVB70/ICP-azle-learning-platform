@@ -78,17 +78,6 @@ export default Server(() => {
     res.json(courseStorage.values());
   });
 
-  // Get one course
-  app.get("/courses/:id", (req, res) => {
-    const courseId = req.params.id;
-    const courseOpt = courseStorage.get(courseId);
-    if ("None" in courseOpt) {
-        res.status(404).send(`the course with id=${courseId} not found`);
-    } else {
-        res.json(courseOpt.Some);
-    }
-  });
-
   // Filter courses based on two techniques -> AND or OR
   app.get('/courses/filter', (req, res) => {
     const filterType = req.query.filterType as string;
@@ -120,6 +109,18 @@ export default Server(() => {
       res.status(400).send(result.error);
     }
   });
+  
+  // Get one course
+  app.get("/courses/:id", (req, res) => {
+    const courseId = req.params.id;
+    const courseOpt = courseStorage.get(courseId);
+    if ("None" in courseOpt) {
+        res.status(404).send(`the course with id=${courseId} not found`);
+    } else {
+        res.json(courseOpt.Some);
+    }
+  });
+
 
   // Update course
   app.put("/courses/:id", (req, res) => {

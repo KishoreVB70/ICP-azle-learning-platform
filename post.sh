@@ -5,5 +5,5 @@ curl -X POST http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses  -H "Cont
     "attachmentURL": "url/path/to/some/photo/attachment",
     "category": "asdf", 
     "keyword": "ammi",
-    "contact": "xyz.com"
+    "contact": "Ashutosh jadav yadav.com"
 }'
