@@ -5,7 +5,7 @@ import express from 'express';
 
 class Course {
    id: string;
-   creatorAddress: string; // Store the principal
+   creatorAddress: string; // Store the principal of the creator
    creatorName: string;
    title: string;
    content: string;
@@ -17,11 +17,12 @@ class Course {
    updatedAt: Date | null
 }
 
-class FilterPayload {
+// To obtain information for filtering the courses
+type FilterPayload = {
   creatorName?: string;
   category?: string;
   keyword?: string;
-}
+};
 
 type Result<T, E> = { type: 'Ok'; value: T } | { type: 'Err'; error: E };
 
@@ -37,7 +38,7 @@ function Err<E>(error: E): Result<never, E> {
 const courseStorage = StableBTreeMap<string, Course>(0);
 const moderatorsStorage =  StableBTreeMap<string, string>(1);
 const bannedUsersStorage = StableBTreeMap<string, string>(2);
-let admin: string;
+const AdminStorage = StableBTreeMap<string, string>(3);
 
 export default Server(() => {
   const app = express();
@@ -45,6 +46,19 @@ export default Server(() => {
 
   // Add course
   app.post("/courses", (req, res) => {
+    const { 
+      title, content, creatorName, 
+      attachmentURL, category, keyword, contact 
+    } = req.body;
+
+    // Input validation
+    if (
+      !title || !content || !creatorName || 
+      !attachmentURL || !category || !keyword || !contact
+    ) {
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
+    }
 
     // Check if the user is banned
     const caller = ic.caller().toString();
@@ -75,6 +89,38 @@ export default Server(() => {
     }
   });
 
+  // Filter courses based on two techniques -> AND or OR
+  app.get('/courses/filter', (req, res) => {
+    const filterType = req.query.filterType as string;
+    if(!filterType) {
+      res.status(400).send("Provide filter type AND OR");
+      return;
+    }
+
+    const payload: FilterPayload = {
+      keyword: req.query.keyword as string,
+      category: req.query.category as string,
+      creatorName: req.query.creatorName as string
+    };
+
+    let result: Result<Course[], string>;
+
+    if (filterType.toUpperCase() === 'AND') {
+      result = filterCourses_And(payload);
+    } else if (filterType.toUpperCase() === 'OR') {
+      result = filterCourses_OR(payload);
+    } else {
+      res.status(400).send("filter type must be either AND or OR");
+      return;
+    }
+
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
   // Update course
   app.put("/courses/:id", (req, res) => {
     const id = req.params.id;
@@ -89,16 +135,50 @@ export default Server(() => {
     }
   });
 
+  // Delete course based on the id
+  app.delete("/courses/:id", (req, res) => {
+    const id = req.params.id;
+    const result = delete_course(id);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
+  // Delete all the user courses courses course
+  app.delete("/courses/", (req, res) => {
+    let caller: string = ic.caller.toString();
+    const result = delete_all_courses(caller);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
+  // Delete all the courses of the address 
+  app.delete("/courses/:address", (req, res) => {
+    const address = req.params.address;
+    const result = delete_courses(address);
+    if (result.type === 'Ok') {
+      res.json(result.value);
+    } else {
+      res.status(400).send(result.error);
+    }
+  });
+
   // View the admin
   app.get("/admin", (req, res) => {
-    if (admin) {
-      res.json(admin);
+    const adminValues = AdminStorage.values()
+    if (adminValues.length > 0) {
+      res.json(adminValues[0]);
     } else {
       res.status(500).send("admin not set");
     }
   });
 
-  // Add admin
+  // Set admin
   app.put("/admin/:address", (req, res) => {
     const address = req.params.address;
     const result = setAdmin(address);
@@ -153,39 +233,6 @@ export default Server(() => {
     }
   });
 
-  // Delete course
-  app.delete("/courses/:id", (req, res) => {
-    const id = req.params.id;
-    const result = delete_course(id);
-    if (result.type === 'Ok') {
-      res.json(result.value);
-    } else {
-      res.status(400).send(result.error);
-    }
-  });
-
-  // Delete all my courses course
-  app.delete("/courses/", (req, res) => {
-    let caller: string = ic.caller.toString();
-    const result = delete_all_courses(caller);
-    if (result.type === 'Ok') {
-      res.json(result.value);
-    } else {
-      res.status(400).send(result.error);
-    }
-  });
-
-  // Delete all user courses
-  app.delete("/courses/:address", (req, res) => {
-    const address = req.params.address;
-    const result = delete_courses(address);
-    if (result.type === 'Ok') {
-      res.json(result.value);
-    } else {
-      res.status(400).send(result.error);
-    }
-  });
-
   return app.listen();
 });
 
@@ -193,14 +240,17 @@ export default Server(() => {
 // If not already initialized, only admin can change
 function setAdmin(address: string): Result<string, string> {
   let caller: string = ic.caller().toString();
-  if (admin) {
-    if(caller == admin ) {
-      admin = address;
+  const items = AdminStorage.items();
+  if (items.length > 0) {
+    const [key, value] = items[0];
+    if(caller === value) {
+      AdminStorage.remove(key);
+      AdminStorage.insert(uuidv4(),address);
       return Ok(address);
     }
     return Err("not authorized");
   }
-  admin = address;
+  AdminStorage.insert(uuidv4(),address);
   return Ok(address);
 }
 
@@ -208,21 +258,23 @@ function setAdmin(address: string): Result<string, string> {
 function addModerator(address: string): Result<string, string> {
   let caller = ic.caller().toString();
 
-  if(caller != admin ) {
+  let values = AdminStorage.values()
+
+  if(caller != values[0] ) {
     return Err("not authorized");
   }
 
   // Returns array of tuple containing key and values
-  let moderators = moderatorsStorage.items();
+  let moderators = moderatorsStorage.values();
 
   // Maximum number of moderators = 5
-  if (moderators.length == 5) {
+  if (moderators.length === 5) {
     return Err("maximum number of moderators added");
   }
 
   // Check if moderator already present
-  for ( const [key, value] of moderators) {
-    if (value == address) {
+  for ( const value of moderators) {
+    if (value === address) {
       return Err("moderator already added")
     }
   }
@@ -235,7 +287,8 @@ function addModerator(address: string): Result<string, string> {
 // Remove a moderator -> only admin can call
 function removeModerator(address: string): Result<string, string> {
   const caller = ic.caller().toString();
-  if(caller != admin) {
+  const value = AdminStorage.values();
+  if(caller != value[0]) {
     return Err("You are not authorized to remove a moderator");
   }
 
@@ -245,7 +298,7 @@ function removeModerator(address: string): Result<string, string> {
   // Obtain the id of the address
   let id: string = "";
   for (const [key, value] of moderators) {
-    if (value == address) {
+    if (value === address) {
       is_moderator = true;
       id = key;
       break;
@@ -261,25 +314,25 @@ function removeModerator(address: string): Result<string, string> {
 }
 
 function is_moderator(address: string): bool {
-  const moderators = moderatorsStorage.items();
-  for (const [key, value] of moderators) {
-    if (value == address) {
-      return true;
+  const moderators = moderatorsStorage.values();
+  for (const value of moderators) {
+    if (value === address) {
+      return true
     }
   }
-  return false;
-
+  return false
 }
 
 // Either admin or a moderator can access
 function banUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
+  const adminValues = AdminStorage.values();
   if (
     // Check whether the user is authorized
-    caller != admin || !is_moderator(caller) ||
+    caller != adminValues[0] || !is_moderator(caller) ||
 
     // Check if the address to be banned is a moderator or admin
-    address == admin || is_moderator(address)
+    address === adminValues[0] || is_moderator(address)
   ) {
     return Err("you are not authorized to ban the user")
   }
@@ -297,8 +350,9 @@ function banUser(address: string): Result<string, string> {
 // can add is authorized helper function
 function unBanUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
+  let values = AdminStorage.values();
   if (
-    caller != admin || !is_moderator(caller) 
+    caller != values[0] || !is_moderator(caller) 
   ) {
     return Err("you are not authorized to unban the user")
   }
@@ -309,7 +363,7 @@ function unBanUser(address: string): Result<string, string> {
   let id: string = ""
 
   for (const [key, value] of bannedUsers) {
-    if (value == address) {
+    if (value === address) {
       is_banned = true;
       id = key;
     }
@@ -326,9 +380,9 @@ function unBanUser(address: string): Result<string, string> {
 }
 
 function is_banned(address: string): bool {
-  const bannedUsers = bannedUsersStorage.items();
-  for (const [key, value] of bannedUsers) {
-    if (value == address) {
+  const bannedUsers = bannedUsersStorage.values();
+  for (const value of bannedUsers) {
+    if (value === address) {
       return true
     }
   }
@@ -343,21 +397,20 @@ function filterCourses_OR(payload: FilterPayload): Result<Course[], string> {
   // Create an empty array
   const courses: Course[] = [];
 
-  // Returns array of tuple values of key and the value
-  let items = courseStorage.items();
+  // Returns array of all the courses
+  let values = courseStorage.values();
 
   // Using for of loop to iterate through the array
-  // Destructuring the two entries in each tuple
-  for(const [key, course] of items) {
+  for(const course of values) {
     let matches = false;
     if (payload.keyword) {
-      matches = course.keyword == payload.keyword;
+      matches = course.keyword.toUpperCase() === payload.keyword.toUpperCase();
     }
     if (payload.category) {
-      matches = matches || course.category == payload.category;
+      matches = matches || course.category.toUpperCase() === payload.category.toUpperCase();
     }
     if (payload.creatorName) {
-      matches = matches || course.creatorName == payload.creatorName;
+      matches = matches || course.creatorName.toUpperCase() == payload.creatorName.toUpperCase();
     }
     if (matches) {
       courses.push(course);
@@ -376,23 +429,24 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
     return Err("Filter payload is empty; at least one filter criterion must be provided");
   }
   
+  //Empty array for courses
   const courses: Course[] = [];
   
-  // Returns array of tuple values of key and the value
-  let items = courseStorage.items();
+  // Returns array of courses
+  let values = courseStorage.values();
 
   // Using for of loop to iterate through the array
   // Destructuring the two entries in each tuple
-  for(const[key, course] of items) {
+  for(const course of values) {
     let matches = true;
     if (payload.keyword) {
-      matches = matches && course.keyword == payload.keyword;
+      matches = matches && course.keyword.toUpperCase() === payload.keyword.toUpperCase();
     }
     if (payload.category) {
-      matches = matches && course.category == payload.category;
+      matches = matches && course.category.toUpperCase() === payload.category.toUpperCase();
     }
     if (payload.creatorName) {
-      matches = matches && course.creatorName == payload.creatorName;
+      matches = matches && course.creatorName.toUpperCase() === payload.creatorName.toUpperCase();
     }
     if (matches) {
       courses.push(course);
@@ -414,7 +468,8 @@ function update_course(id: string): Result<Course, string> {
      return Err(`couldn't update a course with id=${id}. course not found`);
   } else {
      const course = courseOpt.Some;
-    if (caller == admin || is_moderator(caller) || caller == course.creatorAddress ) {
+     const adminValues = AdminStorage.values();
+    if (caller === adminValues[0] || is_moderator(caller) || caller === course.creatorAddress ) {
       return Ok(course)
     } else {
       return Err(`you are not authorized to update the course with id=${id}`)
@@ -430,7 +485,8 @@ function delete_course(id: string): Result<Course,string> {
     return Err(`Course with id=${id} not found`);
   } else {
       const course = courseOpt.Some;
-      if (caller == admin || caller ==  course.creatorAddress) {
+      const adminValues = AdminStorage.values();
+      if (caller === adminValues[0] || caller ===  course.creatorAddress) {
         courseStorage.remove(id);
         return Ok(course);
       } else {
@@ -442,7 +498,8 @@ function delete_course(id: string): Result<Course,string> {
 // Either the course creator or the admin or a moderator can delete a course
 function delete_courses(address: string): Result<string[], string> {
   let caller = ic.caller.toString();
-  if (caller == admin || is_moderator(caller) || caller ==  address) {
+  const adminValues = AdminStorage.values();
+  if (caller === adminValues[0] || is_moderator(caller) || caller ===  address) {
     return delete_all_courses(address);
   } else {
     return Err(`you are not authorized to delete courses for the address=${address}`);
@@ -455,7 +512,7 @@ function delete_all_courses(address: string): Result<string[], string> {
     let items = courseStorage.items();
   
     for (const [key, course] of items) {
-      if (course.creatorAddress == address) {
+      if (course.creatorAddress === address) {
         keysOfAddress.push(key)
       }
     }
