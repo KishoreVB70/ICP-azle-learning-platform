@@ -2,6 +2,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Server, StableBTreeMap, bool, ic } from 'azle';
 import express from 'express';
+import { caller } from 'azle/src/lib/ic/caller';
 
 class Course {
    id: string;
@@ -199,7 +200,8 @@ export default Server(() => {
   // Add moderator
   app.put("/moderators/:address", (req, res) => {
     const address = req.params.address;
-    const result = addModerator(address);
+    let caller = ic.caller().toString();
+    const result = addModerator(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -210,7 +212,8 @@ export default Server(() => {
   // Remove moderator
   app.delete("/moderators/:address", (req, res) => {
     const address: string = req.params.address;
-    const result = removeModerator(address);
+    const caller = ic.caller().toString();
+    const result = removeModerator(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -264,12 +267,8 @@ function setAdmin(address: string): Result<string, string> {
 }
 
 // Add moderator -> only admin can call
-function addModerator(address: string): Result<string, string> {
-  let caller = ic.caller().toString();
-
-  let values = AdminStorage.values()
-
-  if(caller != values[0] ) {
+function addModerator(address: string, caller: string): Result<string, string> {
+  if(!isAdmin(caller) ) {
     return Err("not authorized");
   }
 
@@ -299,10 +298,8 @@ function isAdmin(address: string): bool {
 }
 
 // Remove a moderator -> only admin can call
-function removeModerator(address: string): Result<string, string> {
-  const caller = ic.caller().toString();
-  const value = AdminStorage.values();
-  if(caller != value[0]) {
+function removeModerator(address: string, caller: string): Result<string, string> {
+  if(!isAdmin(caller)) {
     return Err("You are not authorized to remove a moderator");
   }
 
@@ -339,13 +336,12 @@ function isModerator(address: string): bool {
 
 // Either admin or a moderator can access
 function banUser(address: string, caller: string): Result<string, string> {
-  const adminValues = AdminStorage.values();
   if (
     // Check whether the user is either the admin or a moderator
-    ( caller != adminValues[0] && !isModerator(caller) ) ||
+    ( !isAdmin(caller) && !isModerator(caller) ) ||
 
     // Check if the address to be banned is a moderator or admin
-    ( address === adminValues[0] || isModerator(address) )
+    ( isAdmin(address) || isModerator(address) )
   ) {
     return Err("you are not authorized to ban the user")
   }
@@ -362,9 +358,8 @@ function banUser(address: string, caller: string): Result<string, string> {
 
 // can add is authorized helper function
 function unBanUser(address: string, caller: string): Result<string, string> {
-  let values = AdminStorage.values();
   if (
-    caller != values[0] || !isModerator(caller) 
+    !isAdmin(caller) || !isModerator(caller) 
   ) {
     return Err("you are not authorized to unban the user")
   }
@@ -480,8 +475,7 @@ function updateCourse(id: string): Result<Course, string> {
      return Err(`couldn't update a course with id=${id}. course not found`);
   } else {
      const course = courseOpt.Some;
-     const adminValues = AdminStorage.values();
-    if (caller === adminValues[0] || isModerator(caller) || caller === course.creatorAddress ) {
+    if (isAdmin(caller) || isModerator(caller) || caller === course.creatorAddress ) {
       return Ok(course)
     } else {
       return Err(`you are not authorized to update the course with id=${id}`)
