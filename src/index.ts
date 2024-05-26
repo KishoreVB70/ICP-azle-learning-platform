@@ -232,7 +232,8 @@ export default Server(() => {
   // Unban user
   app.delete("/ban/:address", (req, res) => {
     const address = req.params.address;
-    const result = unBanUser(address);
+    const caller = ic.caller().toString();
+    const result = unBanUser(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -354,8 +355,7 @@ function banUser(address: string, caller: string): Result<string, string> {
 }
 
 // can add is authorized helper function
-function unBanUser(address: string): Result<string, string> {
-  const caller = ic.caller.toString();
+function unBanUser(address: string, caller: string): Result<string, string> {
   let values = AdminStorage.values();
   if (
     caller != values[0] || !is_moderator(caller) 
