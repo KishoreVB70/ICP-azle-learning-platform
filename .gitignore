@@ -21,3 +21,7 @@ dist/
 # environment variables
 .env
 .azle
+put.sh
+post.sh
+filter.sh
+delete.sh
