@@ -180,7 +180,7 @@ export default Server(() => {
   });
 
   // Returns all the moderators
-  app.get("/moderators", (req, res) => {
+  app.get("/moderators", (req, res) => {  
     res.json(moderatorsStorage.values());
   })
 
@@ -334,11 +334,11 @@ function banUser(address: string): Result<string, string> {
   const caller = ic.caller.toString();
   const adminValues = AdminStorage.values();
   if (
-    // Check whether the user is authorized
-    caller != adminValues[0] || !is_moderator(caller) ||
+    // Check whether the user is either the admin or a moderator
+    ( caller != adminValues[0] && !is_moderator(caller) ) ||
 
     // Check if the address to be banned is a moderator or admin
-    address === adminValues[0] || is_moderator(address)
+    ( address === adminValues[0] || is_moderator(address) )
   ) {
     return Err("you are not authorized to ban the user")
   }
