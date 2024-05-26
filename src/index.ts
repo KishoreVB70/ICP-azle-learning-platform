@@ -440,13 +440,13 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
   for(const course of values) {
     let matches = true;
     if (payload.keyword) {
-      matches = matches && course.keyword.toUpperCase() == payload.keyword.toUpperCase();
+      matches = matches && course.keyword.toUpperCase() === payload.keyword.toUpperCase();
     }
     if (payload.category) {
-      matches = matches && course.category.toUpperCase() == payload.category.toUpperCase();
+      matches = matches && course.category.toUpperCase() === payload.category.toUpperCase();
     }
     if (payload.creatorName) {
-      matches = matches && course.creatorName.toUpperCase() == payload.creatorName.toUpperCase();
+      matches = matches && course.creatorName.toUpperCase() === payload.creatorName.toUpperCase();
     }
     if (matches) {
       courses.push(course);
@@ -469,7 +469,7 @@ function update_course(id: string): Result<Course, string> {
   } else {
      const course = courseOpt.Some;
      const adminValues = AdminStorage.values();
-    if (caller == adminValues[0] || is_moderator(caller) || caller == course.creatorAddress ) {
+    if (caller === adminValues[0] || is_moderator(caller) || caller === course.creatorAddress ) {
       return Ok(course)
     } else {
       return Err(`you are not authorized to update the course with id=${id}`)
@@ -486,7 +486,7 @@ function delete_course(id: string): Result<Course,string> {
   } else {
       const course = courseOpt.Some;
       const adminValues = AdminStorage.values();
-      if (caller == adminValues[0] || caller ==  course.creatorAddress) {
+      if (caller === adminValues[0] || caller ===  course.creatorAddress) {
         courseStorage.remove(id);
         return Ok(course);
       } else {
@@ -499,7 +499,7 @@ function delete_course(id: string): Result<Course,string> {
 function delete_courses(address: string): Result<string[], string> {
   let caller = ic.caller.toString();
   const adminValues = AdminStorage.values();
-  if (caller == adminValues[0] || is_moderator(caller) || caller ==  address) {
+  if (caller === adminValues[0] || is_moderator(caller) || caller ===  address) {
     return delete_all_courses(address);
   } else {
     return Err(`you are not authorized to delete courses for the address=${address}`);
@@ -512,7 +512,7 @@ function delete_all_courses(address: string): Result<string[], string> {
     let items = courseStorage.items();
   
     for (const [key, course] of items) {
-      if (course.creatorAddress == address) {
+      if (course.creatorAddress === address) {
         keysOfAddress.push(key)
       }
     }
