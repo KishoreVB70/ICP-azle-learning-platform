@@ -2,8 +2,8 @@ curl -X POST http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses  -H "Cont
     "title": "Ammi",
     "content": "Kishore",
     "creatorName": "asdfsdf",
-    "attachmentURL": "url/path/to/some/photo/attachment",
+    "attachmentURL": "url/",
     "category": "asdf", 
     "keyword": "ammi",
-    "contact": "Ashutosh jadav yadav.com"
+    "contact": ".com"
 }'

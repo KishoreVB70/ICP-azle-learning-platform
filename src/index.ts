@@ -139,7 +139,8 @@ export default Server(() => {
   // Delete course based on the id
   app.delete("/courses/:id", (req, res) => {
     const id = req.params.id;
-    const result = delete_course(id);
+    const caller = ic.caller().toString();
+    const result = delete_course(id, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -149,7 +150,7 @@ export default Server(() => {
 
   // Delete all the user courses courses course
   app.delete("/courses/", (req, res) => {
-    let caller: string = ic.caller.toString();
+    let caller: string = ic.caller().toString();
     const result = delete_all_courses(caller);
     if (result.type === 'Ok') {
       res.json(result.value);
@@ -159,9 +160,10 @@ export default Server(() => {
   });
 
   // Delete all the courses of the address 
-  app.delete("/courses/address/:address", (req, res) => {
-    const address = req.params.address;
-    const result = delete_courses(address);
+  app.delete("/courses/address/:add", (req, res) => {
+    const address = req.params.add;
+    const caller = ic.caller().toString();
+    const result = delete_courses(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -292,6 +294,11 @@ function addModerator(address: string): Result<string, string> {
   return Ok(address);
 }
 
+function isAdmin(address: string): bool {
+  const adminValues = AdminStorage.values();
+  return address.toUpperCase() === adminValues[0].toUpperCase();
+}
+
 // Remove a moderator -> only admin can call
 function removeModerator(address: string): Result<string, string> {
   const caller = ic.caller().toString();
@@ -301,19 +308,19 @@ function removeModerator(address: string): Result<string, string> {
   }
 
   let moderators = moderatorsStorage.items();
-  let is_moderator: boolean = false;
+  let isModerator: boolean = false;
 
   // Obtain the id of the address
   let id: string = "";
   for (const [key, value] of moderators) {
     if (value === address) {
-      is_moderator = true;
+      isModerator = true;
       id = key;
       break;
     }
   }
 
-  if(!is_moderator){
+  if(!isModerator){
     return Err("Provided address is not a moderator");
   }
 
@@ -321,7 +328,7 @@ function removeModerator(address: string): Result<string, string> {
   return Ok(address);
 }
 
-function is_moderator(address: string): bool {
+function isModerator(address: string): bool {
   const moderators = moderatorsStorage.values();
   for (const value of moderators) {
     if (value.toUpperCase() === address.toUpperCase()) {
@@ -336,10 +343,10 @@ function banUser(address: string, caller: string): Result<string, string> {
   const adminValues = AdminStorage.values();
   if (
     // Check whether the user is either the admin or a moderator
-    ( caller != adminValues[0] && !is_moderator(caller) ) ||
+    ( caller != adminValues[0] && !isModerator(caller) ) ||
 
     // Check if the address to be banned is a moderator or admin
-    ( address === adminValues[0] || is_moderator(address) )
+    ( address === adminValues[0] || isModerator(address) )
   ) {
     return Err("you are not authorized to ban the user")
   }
@@ -358,7 +365,7 @@ function banUser(address: string, caller: string): Result<string, string> {
 function unBanUser(address: string, caller: string): Result<string, string> {
   let values = AdminStorage.values();
   if (
-    caller != values[0] || !is_moderator(caller) 
+    caller != values[0] || !isModerator(caller) 
   ) {
     return Err("you are not authorized to unban the user")
   }
@@ -475,7 +482,7 @@ function update_course(id: string): Result<Course, string> {
   } else {
      const course = courseOpt.Some;
      const adminValues = AdminStorage.values();
-    if (caller === adminValues[0] || is_moderator(caller) || caller === course.creatorAddress ) {
+    if (caller === adminValues[0] || isModerator(caller) || caller === course.creatorAddress ) {
       return Ok(course)
     } else {
       return Err(`you are not authorized to update the course with id=${id}`)
@@ -484,15 +491,17 @@ function update_course(id: string): Result<Course, string> {
 }
 
 // Either the course creator or the admin or a moderator can delete a course
-function delete_course(id: string): Result<Course,string> {
-  let caller = ic.caller.toString();
+function delete_course(id: string, caller: string): Result<Course,string> {
   const courseOpt = courseStorage.get(id);
   if ("None" in courseOpt) {
     return Err(`Course with id=${id} not found`);
   } else {
       const course = courseOpt.Some;
-      const adminValues = AdminStorage.values();
-      if (caller === adminValues[0] || caller.toUpperCase() ===  course.creatorAddress.toUpperCase()) {
+      if (
+        isAdmin(caller) || 
+        isModerator(caller) ||
+        caller.toUpperCase() ===  course.creatorAddress.toUpperCase()
+      ) {
         courseStorage.remove(id);
         return Ok(course);
       } else {
@@ -502,10 +511,8 @@ function delete_course(id: string): Result<Course,string> {
 }
 
 // Either the course creator or the admin or a moderator can delete a course
-function delete_courses(address: string): Result<string[], string> {
-  let caller = ic.caller.toString();
-  const adminValues = AdminStorage.values();
-  if (caller === adminValues[0] || is_moderator(caller) || caller ===  address) {
+function delete_courses(address: string, caller: string): Result<string[], string> {
+  if (isAdmin(caller) || isModerator(caller) || caller ===  address) {
     return delete_all_courses(address);
   } else {
     return Err(`you are not authorized to delete courses for the address=${address}`);
