@@ -380,8 +380,8 @@ function unBanUser(address: string): Result<string, string> {
 }
 
 function is_banned(address: string): bool {
-  const bannedUsers = bannedUsersStorage.items();
-  for (const [key, value] of bannedUsers) {
+  const bannedUsers = bannedUsersStorage.values();
+  for (const value of bannedUsers) {
     if (value == address) {
       return true
     }
