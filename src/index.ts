@@ -109,7 +109,7 @@ export default Server(() => {
       res.status(400).send(result.error);
     }
   });
-  
+
   // Get one course
   app.get("/courses/:id", (req, res) => {
     const courseId = req.params.id;
@@ -159,7 +159,7 @@ export default Server(() => {
   });
 
   // Delete all the courses of the address 
-  app.delete("/courses/:address", (req, res) => {
+  app.delete("/courses/address/:address", (req, res) => {
     const address = req.params.address;
     const result = delete_courses(address);
     if (result.type === 'Ok') {
@@ -487,7 +487,7 @@ function delete_course(id: string): Result<Course,string> {
   } else {
       const course = courseOpt.Some;
       const adminValues = AdminStorage.values();
-      if (caller === adminValues[0] || caller ===  course.creatorAddress) {
+      if (caller === adminValues[0] || caller.toUpperCase() ===  course.creatorAddress.toUpperCase()) {
         courseStorage.remove(id);
         return Ok(course);
       } else {
@@ -513,7 +513,7 @@ function delete_all_courses(address: string): Result<string[], string> {
     let items = courseStorage.items();
   
     for (const [key, course] of items) {
-      if (course.creatorAddress === address) {
+      if (course.creatorAddress.toUpperCase() === address.toUpperCase()) {
         keysOfAddress.push(key)
       }
     }

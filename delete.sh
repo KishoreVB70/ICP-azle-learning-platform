@@ -1,1 +1,1 @@
-curl -X DELETE http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses/a97e22d2-bd33-4d55-a6ff-dd0e13468936
+curl -X DELETE http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses/154ececb-4a82-4abe-9d79-9e3cda5aba9e
