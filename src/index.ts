@@ -179,7 +179,10 @@ export default Server(() => {
     }
   });
 
-  app.get("./moderators")
+  // Returns all the moderators
+  app.get("/moderators", (req, res) => {
+    res.json(moderatorsStorage.values());
+  })
 
   // Set admin
   app.put("/admin/:address", (req, res) => {
@@ -191,7 +194,6 @@ export default Server(() => {
       res.status(400).send(result.error);
     }
   });
-
 
   // Add moderator
   app.put("/moderators/:address", (req, res) => {
