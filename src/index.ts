@@ -220,7 +220,8 @@ export default Server(() => {
   // Ban user
   app.put("/ban/:address", (req, res) => {
     const address = req.params.address;
-    const result = banUser(address);
+    const caller = ic.caller().toString();
+    const result = banUser(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -322,7 +323,7 @@ function removeModerator(address: string): Result<string, string> {
 function is_moderator(address: string): bool {
   const moderators = moderatorsStorage.values();
   for (const value of moderators) {
-    if (value === address) {
+    if (value.toUpperCase() === address.toUpperCase()) {
       return true
     }
   }
@@ -330,8 +331,7 @@ function is_moderator(address: string): bool {
 }
 
 // Either admin or a moderator can access
-function banUser(address: string): Result<string, string> {
-  const caller = ic.caller.toString();
+function banUser(address: string, caller: string): Result<string, string> {
   const adminValues = AdminStorage.values();
   if (
     // Check whether the user is either the admin or a moderator
