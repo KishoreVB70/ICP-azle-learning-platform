@@ -62,7 +62,7 @@ export default Server(() => {
 
     // Check if the user is banned
     const caller = ic.caller().toString();
-    if (is_banned(caller)) {
+    if (isBanned(caller)) {
       res.status(400).send("Cannot add course. User is banned")
     }
     const course: Course =  {
@@ -121,11 +121,10 @@ export default Server(() => {
     }
   });
 
-
   // Update course
   app.put("/courses/:id", (req, res) => {
     const id = req.params.id;
-    const result = update_course(id);
+    const result = updateCourse(id);
     if (result.type === 'Ok') {
       const course = result.value;
       const updatedMessage = { ...course, ...req.body, updatedAt: getCurrentDate()};
@@ -140,7 +139,7 @@ export default Server(() => {
   app.delete("/courses/:id", (req, res) => {
     const id = req.params.id;
     const caller = ic.caller().toString();
-    const result = delete_course(id, caller);
+    const result = deleteCourse(id, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -151,7 +150,7 @@ export default Server(() => {
   // Delete all the user courses courses course
   app.delete("/courses/", (req, res) => {
     let caller: string = ic.caller().toString();
-    const result = delete_all_courses(caller);
+    const result = deleteAllCourses(caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -163,7 +162,7 @@ export default Server(() => {
   app.delete("/courses/address/:add", (req, res) => {
     const address = req.params.add;
     const caller = ic.caller().toString();
-    const result = delete_courses(address, caller);
+    const result = deleteCourses(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -352,7 +351,7 @@ function banUser(address: string, caller: string): Result<string, string> {
   }
 
   // Delete all the courses of the banned user
-  const result = delete_all_courses(address)
+  const result = deleteAllCourses(address)
   if(result.type ==='Ok') {
     bannedUsersStorage.insert(uuidv4(), address);
     return Ok(address);
@@ -372,17 +371,17 @@ function unBanUser(address: string, caller: string): Result<string, string> {
 
   const bannedUsers = bannedUsersStorage.items();
 
-  let is_banned: bool = false;
+  let isBanned: bool = false;
   let id: string = ""
 
   for (const [key, value] of bannedUsers) {
     if (value === address) {
-      is_banned = true;
+      isBanned = true;
       id = key;
     }
   }
 
-  if(!is_banned) {
+  if(!isBanned) {
     return Err("User is not banned");
   }
 
@@ -392,7 +391,7 @@ function unBanUser(address: string, caller: string): Result<string, string> {
 
 }
 
-function is_banned(address: string): bool {
+function isBanned(address: string): bool {
   const bannedUsers = bannedUsersStorage.values();
   for (const value of bannedUsers) {
     if (value === address) {
@@ -474,7 +473,7 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
 }
 
 // Either the course creator or the admin or a moderator can update a course
-function update_course(id: string): Result<Course, string> {
+function updateCourse(id: string): Result<Course, string> {
   let caller = ic.caller().toString();
   const courseOpt = courseStorage.get(id);
   if ("None" in courseOpt) {
@@ -491,7 +490,7 @@ function update_course(id: string): Result<Course, string> {
 }
 
 // Either the course creator or the admin or a moderator can delete a course
-function delete_course(id: string, caller: string): Result<Course,string> {
+function deleteCourse(id: string, caller: string): Result<Course,string> {
   const courseOpt = courseStorage.get(id);
   if ("None" in courseOpt) {
     return Err(`Course with id=${id} not found`);
@@ -511,16 +510,16 @@ function delete_course(id: string, caller: string): Result<Course,string> {
 }
 
 // Either the course creator or the admin or a moderator can delete a course
-function delete_courses(address: string, caller: string): Result<string[], string> {
+function deleteCourses(address: string, caller: string): Result<string[], string> {
   if (isAdmin(caller) || isModerator(caller) || caller ===  address) {
-    return delete_all_courses(address);
+    return deleteAllCourses(address);
   } else {
     return Err(`you are not authorized to delete courses for the address=${address}`);
   }
 }
 
 // Helper function to delete all the courses of the input address
-function delete_all_courses(address: string): Result<string[], string> {
+function deleteAllCourses(address: string): Result<string[], string> {
     let keysOfAddress: string[] = [];
     let items = courseStorage.items();
   
