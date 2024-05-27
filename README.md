@@ -1,22 +1,84 @@
-## Getting started
+# icp_azle_learning_platform
+This project is a decentralized learning platform built on the Internet Computer using azle, inspired from medium and dacade. It allows users to create, read, delete, and update courses, with certain roles and permissions to ensure security and proper management.
 
-To get started developing in the browser, click this button:
+This project leverages the capabilities of the Internet Computer to provide a decentralized, permission-based system for managing online courses, ensuring robust access control and user management.
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/dacadeorg/icp-message-board-contract)
+### Key Features
 
-If you rather want to use GitHub Codespaces, click this button instead:
+1. **Course Management**
+   - **Add Course:** Users can add new courses with details like title, creator name, body, attachment URL, keyword, category, and contact information.
+   - **Update Course:** Only the creator, admin, or moderators can update a course's details.
+   - **Delete Course:** Individial courses can be deleted by the creator, admin, or moderators.
+   - **Delete Courses:** Users can delete all their own courses.
+   - **Delete Courses of a creator:** Admins and moderators can delete all courses by a specific creator.
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/dacadeorg/icp-message-board-contract?quickstart=1)
+2. **Course Filtering**
+    - AND based filtering provides the courses which match all of the criterias of the user
+    - OR based filtering provided courses whcih match any of the criterias fo the user
+   - **Filter Courses (AND Condition):** Retrieve courses that match all provided criteria (keyword, category, creator address).
+   - **Filter Courses (OR Condition):** Retrieve courses that match any of the provided criteria (keyword, category, creator address).
 
-**NOTE**: After `dfx deploy`, when developing in GitHub Codespaces, run `./canister_urls.py` and click the links that are shown there.
+3. **User Roles and Permissions**
+   - To regulate ill actors, a moderation system is created based on admin access
+   - **Admin Management:** 
+     - Set or change the admin address.
+     - Admin has the highest level of permissions, mainly changing the admin and adding, removing moderators.
+   - **Moderator Management:** 
+     - Add and remove moderators.
+     - Moderators can manage courses(update, delete) and users(ban, unban) but have limited permissions compared to the admin.
+   - **Banned Users Management:** 
+     - Ban users from adding courses.
+     - Unban users.
+     - Banning a user also removes all their courses.
 
-If you prefer running VS Code locally and not in the browser, click "Codespaces: ..." or "Gitpod" in the bottom left corner and select "Open in VS Code" in the menu that appears. 
-If prompted, proceed by installing the recommended plugins for VS Code.
+### Detailed Functionality
 
-To develop fully locally, first install [Docker](https://www.docker.com/get-started/) and [VS Code](https://code.visualstudio.com/) and start them on your machine.
-Next, click the following button to open the dev container locally:
+1. **Set Admin**
+   - Initializes the admin address if not already set or allows the current admin to change it.
 
-[![Open locally in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/dacadeorg/icp-message-board-contract)
+2. **Add Moderator**
+   - Allows the admin to add a new moderator, with a maximum of 5 moderators.
+
+3. **Remove Moderator**
+   - Allows the admin to remove a moderator.
+
+4. **Get Course**
+   - Retrieves a course based on its ID.
+
+4. **Get Courses**
+   - Retrieves all courses
+
+5. **Add Course**
+   - Allows users to add a new course if they are not banned and have provided all required fields.
+
+6. **Update Course**
+   - Allows the course creator, admin, or moderators to update course details.
+
+7. **Delete Course**
+   - Allows the course creator, admin, or moderators to delete a course.
+
+8. **Delete Courses by a creator**
+   - Allows the admin or moderators to delete all courses by a specific creator.
+
+9. **Delete Courses**
+   - Allows users to delete all courses they have created.
+
+10. **Ban Creator**
+    - Allows the admin or moderators to ban a user from adding courses and deletes all their courses.
+
+11. **Unban Creator**
+    - Allows the admin or moderators to unban a user.
+
+12. **Filter Courses (AND Condition)**
+    - Retrieves courses that satisfy all provided filter criteria.
+
+13. **Filter Courses (OR Condition)**
+    - Retrieves courses that satisfy any of the provided filter criteria.
+
+### Helper Functions
+- **_is_admin:** Checks if a given address is the admin.
+- **_is_authorized:** Checks if a given address is either the admin or a moderator or the creator of a specific course.
+- **_is_moderator:** Checks if the caller is a moderator.
 
 ## Prerequisities
 
@@ -65,13 +127,13 @@ brew install podman
 ```
 {
   "canisters": {
-    "message_board": {
+    "icp_azle_learning_platform": {
       "type": "custom",
       "main": "src/index.ts",
       "candid": "src/index.did",
       "candid_gen": "http",
-      "build": "npx azle message_board",
-      "wasm": ".azle/message_board/message_board.wasm",
+      "build": "npx azle icp_azle_learning_platform",
+      "wasm": ".azle/icp_azle_learning_platform/icp_azle_learning_platform.wasm",
       "gzip": true,
       "metadata": [
         {
@@ -86,15 +148,16 @@ brew install podman
     }
   }
 }
+
 ```
-where `message_board` is the name of the canister. 
+where `icp_azle_learning_platform` is the name of the canister. 
 
 6. Create a `package.json` with the next content and run `npm i`:
 ```
 {
-  "name": "message_board",
+  "name": "icp_azle_learning_platform",
   "version": "0.1.0",
-  "description": "Internet Computer message board application",
+  "description": "Internet Computer learning platform",
   "dependencies": {
     "@dfinity/agent": "^0.21.4",
     "@dfinity/candid": "^0.21.4",
@@ -140,7 +203,7 @@ On the other hand, you can interact with the canister using `dfx` via CLI:
 ### get canister id:
 - `dfx canister id <CANISTER_NAME>`
 Example:
-- `dfx canister id message_board`
+- `dfx canister id icp_azle_learning_platform`
 Response:
 ```
 bkyz2-fmaaa-aaaaa-qaaaq-cai
