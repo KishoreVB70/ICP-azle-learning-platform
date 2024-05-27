@@ -215,17 +215,20 @@ export default Server(() => {
 
   // View the admin if present
   app.get("/admin", (req, res) => {
-    const adminValues = AdminStorage.values()
-    if (adminValues.length > 0) {
-      res.json(adminValues[0]);
+    if (!AdminStorage.isEmpty()) {
+      const adminValue = AdminStorage.values(0,1);
+      res.json(adminValue);
     } else {
       res.status(500).send("admin not set");
     }
   });
 
   // Retrieves all the moderator addresses
-  app.get("/moderators", (req, res) => {  
-    res.json(moderatorsStorage.values());
+  app.get("/moderators", (req, res) => {
+    if (!moderatorsStorage.isEmpty()) {
+      res.json(moderatorsStorage.values());
+    }
+    res.status(500).send("moderators not set");
   })
 
   // Set admin
@@ -353,7 +356,6 @@ function addModerator(address: string, caller: string): Result<string, string> {
   return Ok(address);
 }
 
-
 // Only the admin can remove a moderator
 function removeModerator(address: string, caller: string): Result<string, string> {
   if(!isAdmin(caller)) {
@@ -451,7 +453,6 @@ function unBanUser(address: string, caller: string): Result<string, string> {
   // Remove user from the list of banned users
   bannedUsersStorage.remove(id);
   return Ok(address);
-
 }
 
 // Check whether the user is banned
