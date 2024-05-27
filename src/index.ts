@@ -84,7 +84,7 @@ export default Server(() => {
       createdAt: getCurrentDate(),
       updatedAt: null
     };
-    
+
     courseStorage.insert(course.id, course);
     res.json(course);
   });
@@ -140,12 +140,30 @@ export default Server(() => {
   // Update course
   app.put("/courses/:id", (req, res) => {
     const id = req.params.id;
-    const result = updateCourse(id);
+    const { 
+      creatorName, title, content, 
+      attachmentURL, category, keyword, contact 
+    } = req.body;
+    const caller = ic.caller().toString();
+    const result = validateUpdate(id, caller);
+
     if (result.type === 'Ok') {
       const course = result.value;
-      const updatedMessage = { ...course, ...req.body, updatedAt: getCurrentDate()};
-      courseStorage.insert(course.id, updatedMessage);
-      res.json(updatedMessage);
+
+      const updatedCourse: Course = {
+        ...course,
+        creatorName: creatorName || course.creatorName,
+        title: title || course.title,
+        content: content || course.content,
+        attachmentURL: attachmentURL || course.attachmentURL,
+        category: category || course.category,
+        keyword: keyword || course.keyword,
+        contact: contact || course.contact,
+        updatedAt: getCurrentDate()
+      };
+
+      courseStorage.insert(course.id, updatedCourse);
+      res.json(updatedCourse);
     } else {
       res.status(400).send(`couldn't update a course with id=${id}. course not found`);
     }
@@ -483,8 +501,7 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
 }
 
 // Either the course creator or the admin or a moderator can update a course
-function updateCourse(id: string): Result<Course, string> {
-  let caller = ic.caller().toString();
+function validateUpdate(id: string, caller: string): Result<Course, string> {
   const courseOpt = courseStorage.get(id);
   if ("None" in courseOpt) {
      return Err(`couldn't update a course with id=${id}. course not found`);
