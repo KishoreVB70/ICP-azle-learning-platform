@@ -1,4 +1,3 @@
-// cannister code goes here
 import { v4 as uuidv4 } from 'uuid';
 import { Server, StableBTreeMap, bool, ic } from 'azle';
 import express from 'express';
@@ -24,6 +23,7 @@ type FilterPayload = {
   keyword?: string;
 };
 
+// Custom type for error handling from functions
 type Result<T, E> = { type: 'Ok'; value: T } | { type: 'Err'; error: E };
 
 function Ok<T>(value: T): Result<T, never> {
@@ -34,7 +34,7 @@ function Err<E>(error: E): Result<never, E> {
   return { type: 'Err', error };
 }
 
-// Conver them into persistent memory
+// Storing important variables in persistent memory using stableBTreeMap
 const courseStorage = StableBTreeMap<string, Course>(0);
 const moderatorsStorage =  StableBTreeMap<string, string>(1);
 const bannedUsersStorage = StableBTreeMap<string, string>(2);
@@ -43,21 +43,6 @@ const AdminStorage = StableBTreeMap<string, string>(3);
 export default Server(() => {
   const app = express();
   app.use(express.json());
-
-  // Validate the course input
-  const validateCourseInput = (course: any) => {
-    const requiredFields = [
-      'creatorName', 'title', 'content', 'attachmentURL', 'category', 'keyword', 'contact'
-    ];
-
-    for (const field of requiredFields) {
-      if (!course[field] || typeof course[field] !== 'string' || course[field].trim() === '') {
-        return `${field} is required and must be a non-empty string.`;
-      }
-    }
-
-    return null;
-  };
 
   app.post("/courses", (req, res) => {
 
@@ -498,6 +483,21 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
   }
 
   return Ok(courses);
+}
+
+// Validate the course input
+function validateCourseInput(course: any): string | null {
+  const requiredFields = [
+    'creatorName', 'title', 'content', 'attachmentURL', 'category', 'keyword', 'contact'
+  ];
+
+  for (const field of requiredFields) {
+    if (!course[field] || typeof course[field] !== 'string' || course[field].trim() === '') {
+      return `${field} is required and must be a non-empty string.`;
+    }
+  }
+
+  return null;
 }
 
 // Either the course creator or the admin or a moderator can update a course
