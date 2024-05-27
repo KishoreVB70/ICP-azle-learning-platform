@@ -4,6 +4,6 @@ curl -X PUT http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses/b842b35d-9
     "creatorName": "kishore",
     "attachmentURL": "url/",
     "category": "programming", 
-    "keyword": "Azle",
-    "contact": "microsoft.com/kishorevb70"
+    "keyword": "ts",
+    "contact": "github.com/kishorevb70"
 }'
