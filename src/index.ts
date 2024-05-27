@@ -395,6 +395,14 @@ function validateCourseInput(course: any): string | null {
   return null;
 }
 
+// Checks if the caller is either the creator or the admin or a moderator
+function isAuthorized(course: Course, caller: string): bool {
+  if (isAdmin(caller) || isModerator(caller) || caller === course.creatorAddress ) {
+    return true;
+  } 
+  return false;
+}
+
 // Either the course creator or the admin or a moderator can update a course
 function validateUpdate(id: string, caller: string): Result<Course, string> {
   const courseOpt = courseStorage.get(id);
@@ -457,6 +465,35 @@ function deleteAllCourses(address: string): Result<string[], string> {
 }
 
 // Administrative functions
+
+// Validate the input to be the admin
+function isAdmin(address: string): bool {
+  const adminValues = AdminStorage.values();
+  return address.toUpperCase() === adminValues[0].toUpperCase();
+}
+
+// Validate the input to be a moderator
+function isModerator(address: string): bool {
+  const moderators = moderatorsStorage.values();
+  for (const value of moderators) {
+    if (value.toUpperCase() === address.toUpperCase()) {
+      return true
+    }
+  }
+  return false
+}
+
+// Check whether the user is banned
+function isBanned(address: string): bool {
+  const bannedUsers = bannedUsersStorage.values();
+  for (const value of bannedUsers) {
+    if (value === address) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // If not already initialized, only admin can change
 function setAdmin(address: string, caller: string): Result<string, string> {
   const items = AdminStorage.items();
@@ -593,42 +630,6 @@ function unBanUser(address: string, caller: string): Result<string, string> {
   // Remove user from the list of banned users
   bannedUsersStorage.remove(id);
   return Ok(address);
-}
-
-// Checks if the caller is either the creator or the admin or a moderator
-function isAuthorized(course: Course, caller: string): bool {
-  if (isAdmin(caller) || isModerator(caller) || caller === course.creatorAddress ) {
-    return true;
-  } 
-  return false;
-}
-
-// Validate the input to be the admin
-function isAdmin(address: string): bool {
-  const adminValues = AdminStorage.values();
-  return address.toUpperCase() === adminValues[0].toUpperCase();
-}
-
-// Validate the input to be a moderator
-function isModerator(address: string): bool {
-  const moderators = moderatorsStorage.values();
-  for (const value of moderators) {
-    if (value.toUpperCase() === address.toUpperCase()) {
-      return true
-    }
-  }
-  return false
-}
-
-// Check whether the user is banned
-function isBanned(address: string): bool {
-  const bannedUsers = bannedUsersStorage.values();
-  for (const value of bannedUsers) {
-    if (value === address) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function getCurrentDate() {
