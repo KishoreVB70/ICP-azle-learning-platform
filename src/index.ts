@@ -44,8 +44,9 @@ export default Server(() => {
   const app = express();
   app.use(express.json());
 
+  // Add a new course
   app.post("/courses", (req, res) => {
-
+    // Validate that the request contains all the required fields
     const validationError = validateCourseInput(req.body);
     if (validationError) {
       return res.status(400).send(validationError);
@@ -56,6 +57,9 @@ export default Server(() => {
     if (isBanned(caller)) {
       res.status(400).send("Cannot add course. User is banned")
     }
+
+    // Create new instance of course
+    // This syntax will eliminate any additional fields provided in the request body
     const course: Course =  {
       id: uuidv4(), 
       creatorAddress: ic.caller().toString(),
@@ -70,31 +74,42 @@ export default Server(() => {
       updatedAt: null
     };
 
+    // Add the course into persistent memory
     courseStorage.insert(course.id, course);
     res.json(course);
   });
 
-  // Get all courses
+  // Retreive all courses
   app.get("/courses", (req, res) => {
     res.json(courseStorage.values());
   });
 
-  // Filter courses based on two techniques -> AND or OR
+  // Retreive specific courses based on two techniques -> AND or OR
   app.get('/courses/filter', (req, res) => {
+    // Check for the filter type
     const filterType = req.query.filterType as string;
     if(!filterType) {
       res.status(400).send("Provide filter type AND OR");
       return;
     }
 
+    // Filter condition can be any combination of the three
     const payload: FilterPayload = {
       keyword: req.query.keyword as string,
       category: req.query.category as string,
       creatorName: req.query.creatorName as string
     };
 
+    // The request should contain atleast one condition
+    if(!payload.keyword && !payload.category && !payload.creatorName) {
+      res.status(400).send("Provide atleast 1 filter condition");
+    }
+
+    // Initializing empty result type
     let result: Result<Course[], string>;
 
+    // Calling the appropriate function based on the filter type
+    // Returns all the courses matching the filter condition
     if (filterType.toUpperCase() === 'AND') {
       result = filterCourses_And(payload);
     } else if (filterType.toUpperCase() === 'OR') {
@@ -404,25 +419,28 @@ function unBanUser(address: string, caller: string): Result<string, string> {
 
 }
 
+// Check whether the user is banned
 function isBanned(address: string): bool {
   const bannedUsers = bannedUsersStorage.values();
   for (const value of bannedUsers) {
     if (value === address) {
-      return true
+      return true;
     }
   }
   return false;
 }
 
+/* 
+Filters courses based on the provided criteria (OR condition).
+The OR condition is such that it retreives the courses which satisfy any of the
+criteria provided by the user 
+*/
 function filterCourses_OR(payload: FilterPayload): Result<Course[], string> {
-  if (!payload.keyword && !payload.category && !payload.creatorName) {
-      return Err("Filter payload is empty; at least one filter criterion must be provided");
-  }
 
   // Create an empty array
   const courses: Course[] = [];
 
-  // Returns array of all the courses
+  // Obtain array of all the courses
   let values = courseStorage.values();
 
   // Using for of loop to iterate through the array
@@ -443,17 +461,17 @@ function filterCourses_OR(payload: FilterPayload): Result<Course[], string> {
   }
 
   if (courses.length === 0) {
-    return Err("not found");
+    return Err("no courses found");
   }
     return Ok(courses);
 }
 
-function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
-  // Add a separate function to check if payload is empty
-  if (!payload.keyword && !payload.category && !payload.creatorName) {
-    return Err("Filter payload is empty; at least one filter criterion must be provided");
-  }
-  
+/*
+Filters courses based on the provided criteria (AND condition)
+The AND condition is such that it retreives the courses which satisfy all the
+criteria provided by the user 
+*/
+function filterCourses_And(payload: FilterPayload): Result<Course[], string>{ 
   //Empty array for courses
   const courses: Course[] = [];
   
@@ -461,7 +479,6 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
   let values = courseStorage.values();
 
   // Using for of loop to iterate through the array
-  // Destructuring the two entries in each tuple
   for(const course of values) {
     let matches = true;
     if (payload.keyword) {
@@ -479,7 +496,7 @@ function filterCourses_And(payload: FilterPayload): Result<Course[], string>{
   }
 
   if (courses.length === 0) {
-    return Err("No courses");
+    return Err("No courses found");
   }
 
   return Ok(courses);
