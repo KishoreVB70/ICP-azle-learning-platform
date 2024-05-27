@@ -1,12 +1,12 @@
 {
   "canisters": {
-    "message_board": {
+    "ICP_azle_learning_platform": {
       "type": "custom",
       "main": "src/index.ts",
       "candid": "src/index.did",
       "candid_gen": "http",
-      "build": "npx azle message_board",
-      "wasm": ".azle/message_board/message_board.wasm",
+      "build": "npx azle ICP_azle_learning_platform",
+      "wasm": ".azle/ICP_azle_learning_platform/ICP_azle_learning_platform.wasm",
       "gzip": true,
       "metadata": [
         {
