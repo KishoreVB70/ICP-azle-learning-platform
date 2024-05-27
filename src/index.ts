@@ -2,7 +2,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Server, StableBTreeMap, bool, ic } from 'azle';
 import express from 'express';
-import { caller } from 'azle/src/lib/ic/caller';
 
 class Course {
    id: string;
@@ -45,20 +44,26 @@ export default Server(() => {
   const app = express();
   app.use(express.json());
 
-  // Add course
-  app.post("/courses", (req, res) => {
-    const { 
-      title, content, creatorName, 
-      attachmentURL, category, keyword, contact 
-    } = req.body;
+  // Validate the course input
+  const validateCourseInput = (course: any) => {
+    const requiredFields = [
+      'creatorName', 'title', 'content', 'attachmentURL', 'category', 'keyword', 'contact'
+    ];
 
-    // Input validation
-    if (
-      !title || !content || !creatorName || 
-      !attachmentURL || !category || !keyword || !contact
-    ) {
-      res.status(400).json({ error: 'Missing required fields' });
-      return;
+    for (const field of requiredFields) {
+      if (!course[field] || typeof course[field] !== 'string' || course[field].trim() === '') {
+        return `${field} is required and must be a non-empty string.`;
+      }
+    }
+
+    return null;
+  };
+
+  app.post("/courses", (req, res) => {
+
+    const validationError = validateCourseInput(req.body);
+    if (validationError) {
+      return res.status(400).send(validationError);
     }
 
     // Check if the user is banned
@@ -67,9 +72,19 @@ export default Server(() => {
       res.status(400).send("Cannot add course. User is banned")
     }
     const course: Course =  {
-      id: uuidv4(), createdAt: getCurrentDate(),
-      creatorAddress: ic.caller().toString(), ...req.body
+      id: uuidv4(), 
+      creatorAddress: ic.caller().toString(),
+      creatorName: req.body.creatorName,
+      title: req.body.title,
+      content: req.body.content,
+      attachmentURL: req.body.attachmentURL,
+      category: req.body.category,
+      keyword: req.body.keyword,
+      contact: req.body.contact,
+      createdAt: getCurrentDate(),
+      updatedAt: null
     };
+    
     courseStorage.insert(course.id, course);
     res.json(course);
   });
