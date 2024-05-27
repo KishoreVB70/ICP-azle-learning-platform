@@ -143,7 +143,6 @@ export default Server(() => {
   // Update course based on the id
   app.put("/courses/:id", (req, res) => {
     const id = req.params.id;
-
     const { 
       creatorName, title, content, 
       attachmentURL, category, keyword, contact 
@@ -152,7 +151,9 @@ export default Server(() => {
     // Obtain the principal of the caller
     const caller = ic.caller().toString();
 
-    // validate if the course exist and the caller is authorized to update
+
+
+    //validate if the course exist and the caller is authorized to update
     const result = validateUpdate(id, caller);
 
     if (result.type === 'Ok') {
@@ -174,7 +175,7 @@ export default Server(() => {
       courseStorage.insert(course.id, updatedCourse);
       res.json(updatedCourse);
     } else {
-      res.status(400).send(`couldn't update a course with id=${id}. course not found`);
+      res.status(400).send(result.error);
     }
   });
 
@@ -468,23 +469,32 @@ function deleteAllCourses(address: string): Result<string[], string> {
 
 // Validate the input to be the admin
 function isAdmin(address: string): bool {
-  const adminValues = AdminStorage.values();
-  return address.toUpperCase() === adminValues[0].toUpperCase();
+  if(AdminStorage.isEmpty()) {
+    return false;
+  }
+  const adminValues: string[] = AdminStorage.values(0,1);
+  return address === adminValues[0];
 }
 
 // Validate the input to be a moderator
 function isModerator(address: string): bool {
+  if(moderatorsStorage.isEmpty()) {
+    return false;
+  }
   const moderators = moderatorsStorage.values();
   for (const value of moderators) {
     if (value.toUpperCase() === address.toUpperCase()) {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 // Check whether the user is banned
 function isBanned(address: string): bool {
+  if(bannedUsersStorage.isEmpty()) {
+    return false;
+  }
   const bannedUsers = bannedUsersStorage.values();
   for (const value of bannedUsers) {
     if (value === address) {
@@ -526,6 +536,11 @@ function addModerator(address: string, caller: string): Result<string, string> {
     return Err("not authorized");
   }
 
+  if(moderatorsStorage.isEmpty()) {
+    moderatorsStorage.insert(uuidv4(), address);
+    return Ok(address);
+  }
+
   // Returns array of tuple containing key and values
   let moderators = moderatorsStorage.values();
 
@@ -550,6 +565,10 @@ function addModerator(address: string, caller: string): Result<string, string> {
 function removeModerator(address: string, caller: string): Result<string, string> {
   if(!isAdmin(caller)) {
     return Err("You are not authorized to remove a moderator");
+  }
+
+  if(moderatorsStorage.isEmpty()) {
+    return Err("Moderators empty");
   }
 
   let moderators = moderatorsStorage.items();
@@ -609,6 +628,10 @@ function unBanUser(address: string, caller: string): Result<string, string> {
     !isAdmin(caller) || !isModerator(caller) 
   ) {
     return Err("you are not authorized to unban the user")
+  }
+
+  if(bannedUsersStorage.isEmpty()) {
+    return Err("No users banned");
   }
 
   const bannedUsers = bannedUsersStorage.items();
