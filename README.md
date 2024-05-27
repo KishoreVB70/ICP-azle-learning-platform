@@ -1,7 +1,7 @@
 # icp_azle_learning_platform
 This project is a decentralized learning platform built on the Internet Computer using Typescript and Azle framework, inspired from medium and dacade. It allows users to create, read, delete, and update courses, with certain roles and permissions to ensure security and proper management.
 
-The project leverages the capabilities of the Internet Computer to provide a decentralized, permission-based system for managing online courses, ensuring robust access control and user management.
+The project leverages the capabilities of the Internet Computer to provide a decentralized environment for managing online courses, ensuring robust access control and user management.
 
 ### Key Features
 
