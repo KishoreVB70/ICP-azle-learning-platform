@@ -216,83 +216,54 @@ http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000
 
 With this URL, you can interact with the canister using an HTTP client of your choice. We are going to use `curl`.
 
-### create a message:
+### create a course:
 - `curl -X POST <CANISTER_URL>/<REQUEST_PATH> -H "Content-type: application/json" -d <PAYLOAD>`
 Example: 
-- `curl -X POST http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/messages -H "Content-type: application/json" -d '{"title": "todo list", "body": "some important things", "attachmentURL": "url/path/to/some/photo/attachment"}'`
-Response:
 ```
-{
-    "id": "d8326ec8-fe70-402e-8914-ca83f0f1055b",
-    "createdAt": "2024-02-09T11:24:32.441Z",
-    "title": "todo list",
-    "body": "some important things",
-    "attachmentURL": "url/path/to/some/photo/attachment"
-}
-```
-
-### update a message:
-- `curl -X PUT <CANISTER_URL>/<REQUEST_PATH>/<MESSAGE_ID> -H "Content-type: application/json" -d <PAYLOAD>`
-Example (In this case we include a message id in the payload to identify the message we want to update): 
-- `curl -X PUT  http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/messages/d8326ec8-fe70-402e-8914-ca83f0f1055b -H "Content-type: application/json" -d '{"title": "UPDATED TITLE", "body": "some important things", "attachmentURL": "url/path/to/some/photo/attachment"}'`
-Response:
-```
-{
-    "id": "d8326ec8-fe70-402e-8914-ca83f0f1055b",
-    "createdAt": "2024-02-09T11:24:32.441Z",
-    "title": "UPDATED TITLE",
-    "body": "some important things",
-    "attachmentURL": "url/path/to/some/photo/attachment",
-    "updatedAt": "2024-02-09T11:26:59.002Z"
-}
+curl -X POST http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses  -H "Content-type: application/json" -d '{
+    "title": "How to create a Typescript azle project",
+    "content": "abc",
+    "creatorName": "kishore",
+    "attachmentURL": "url/",
+    "category": "programming", 
+    "keyword": "azle",
+    "contact": "github.com/kishorevb70"
+}'
 ```
 
-### get all messages:
+### update a course:
+- `curl -X PUT <CANISTER_URL>/<REQUEST_PATH>/<COURSE_ID> -H "Content-type: application/json" -d <PAYLOAD>`
+Example (In this case we include a course id in the payload to identify the course we want to update): 
+```
+curl -X PUT http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses/a97e22d2-bd33-4d55-a6ff-dd0e13468936  -H "Content-type: application/json" -d '{
+    "title": "How to create a Typescript azle project",
+    "content": "abc",
+    "creatorName": "kishore",
+    "attachmentURL": "url/",
+    "category": "programming", 
+    "keyword": "Azle",
+    "contact": "github.com/kishorevb70"
+}'
+```
+
+### get all courses:
 - `curl <CANISTER_URL>/<REQUEST_PATH>`
 Example:
-- `curl http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/messages`
-Response:
-```
-[
-    {
-        "id": "d8326ec8-fe70-402e-8914-ca83f0f1055b",
-        "createdAt": "2024-02-09T11:24:32.441Z",
-        "title": "UPDATED TITLE",
-        "body": "some important things",
-        "attachmentURL": "url/path/to/some/photo/attachment",
-        "updatedAt": "2024-02-09T11:26:59.002Z"
-    }
-]
-```
+- `curl http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses`
 
-### get a message:
-- `curl <CANISTER_URL>/<REQUEST_PATH>/<MESSAGE_ID>`
-Example (here we only provide a message id):
+### get a course:
+- `curl <CANISTER_URL>/<REQUEST_PATH>/<COURSE_ID>`
+Example (here we only provide a course id):
 - `curl http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/messages/d8326ec8-fe70-402e-8914-ca83f0f1055b`
-Response:
+
+### delete a course:
+- `curl -X DELETE <CANISTER_URL>/<REQUEST_PATH>/<COURSE_ID>`
+Example (here we only provide a course id):
 ```
-{
-    "id": "d8326ec8-fe70-402e-8914-ca83f0f1055b",
-    "createdAt": "2024-02-09T11:24:32.441Z",
-    "title": "UPDATED TITLE",
-    "body": "some important things",
-    "attachmentURL": "url/path/to/some/photo/attachment",
-    "updatedAt": "2024-02-09T11:26:59.002Z"
-}
+curl -X DELETE http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses/a97e22d2-bd33-4d55-a6ff-dd0e13468936
 ```
 
-### delete a message:
-- `curl -X DELETE <CANISTER_URL>/<REQUEST_PATH>/<MESSAGE_ID>`
-Example (here we only provide a message id):
-- `curl -X DELETE http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/messages/d8326ec8-fe70-402e-8914-ca83f0f1055b`
-Response (returns the deleted message):
+### filter courses
 ```
-{
-    "id": "d8326ec8-fe70-402e-8914-ca83f0f1055b",
-    "createdAt": "2024-02-09T11:24:32.441Z",
-    "title": "UPDATED TITLE",
-    "body": "some important things",
-    "attachmentURL": "url/path/to/some/photo/attachment",
-    "updatedAt": "2024-02-09T11:26:59.002Z"
-}
+curl "http://bkyz2-fmaaa-aaaaa-qaaaq-cai.localhost:8000/courses/filter?filterType=OR&keyword=azle&category=programming&creatorName=kishore"
 ```
