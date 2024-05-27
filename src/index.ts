@@ -126,7 +126,7 @@ export default Server(() => {
     }
   });
 
-  // Get one course
+  // Retrieve one course based on the provided id
   app.get("/courses/:id", (req, res) => {
     const courseId = req.params.id;
     const courseOpt = courseStorage.get(courseId);
@@ -137,19 +137,25 @@ export default Server(() => {
     }
   });
 
-  // Update course
+  // Update course based on the id
   app.put("/courses/:id", (req, res) => {
     const id = req.params.id;
+
     const { 
       creatorName, title, content, 
       attachmentURL, category, keyword, contact 
     } = req.body;
+
+    // Obtain the principal of the caller
     const caller = ic.caller().toString();
+
+    // validate if the course exist and the caller is authorized to update
     const result = validateUpdate(id, caller);
 
     if (result.type === 'Ok') {
       const course = result.value;
 
+      // Update the provided fields and retain the others
       const updatedCourse: Course = {
         ...course,
         creatorName: creatorName || course.creatorName,
@@ -181,9 +187,10 @@ export default Server(() => {
     }
   });
 
-  // Delete all the user courses courses course
+  // Delete all the courses of the user
   app.delete("/courses/", (req, res) => {
     let caller: string = ic.caller().toString();
+    // Removes all the courses that contains the caller as the creator
     const result = deleteAllCourses(caller);
     if (result.type === 'Ok') {
       res.json(result.value);
@@ -522,14 +529,12 @@ function validateUpdate(id: string, caller: string): Result<Course, string> {
   const courseOpt = courseStorage.get(id);
   if ("None" in courseOpt) {
      return Err(`couldn't update a course with id=${id}. course not found`);
-  } else {
-     const course = courseOpt.Some;
-    if (isAdmin(caller) || isModerator(caller) || caller === course.creatorAddress ) {
-      return Ok(course)
-    } else {
-      return Err(`you are not authorized to update the course with id=${id}`)
-    }
   }
+  const course = courseOpt.Some;
+  if (!isAuthorized(course, caller)) {
+    return Err(`you are not authorized to update the course with id=${id}`)
+  }
+  return Ok(course)
 }
 
 // Either the course creator or the admin or a moderator can delete a course
@@ -537,19 +542,21 @@ function deleteCourse(id: string, caller: string): Result<Course,string> {
   const courseOpt = courseStorage.get(id);
   if ("None" in courseOpt) {
     return Err(`Course with id=${id} not found`);
-  } else {
-      const course = courseOpt.Some;
-      if (
-        isAdmin(caller) || 
-        isModerator(caller) ||
-        caller.toUpperCase() ===  course.creatorAddress.toUpperCase()
-      ) {
-        courseStorage.remove(id);
-        return Ok(course);
-      } else {
-        return Err(`you are not authorized to delete course with id=${id}`);
-      }
   }
+  const course = courseOpt.Some;
+  if ( !isAuthorized(course, caller) ) {
+    return Err(`you are not authorized to delete course with id=${id}`);
+  } 
+  courseStorage.remove(id);
+  return Ok(course);
+}
+
+// Checks if the caller is either the creator or the admin or a moderator
+function isAuthorized(course: Course, caller: string): bool {
+  if (isAdmin(caller) || isModerator(caller) || caller === course.creatorAddress ) {
+    return true;
+  } 
+  return false;
 }
 
 // Either the course creator or the admin or a moderator can delete a course
