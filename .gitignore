@@ -25,3 +25,4 @@ put.sh
 post.sh
 filter.sh
 delete.sh
+get.sh
