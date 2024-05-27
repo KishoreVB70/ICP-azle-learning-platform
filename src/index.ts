@@ -203,6 +203,8 @@ export default Server(() => {
   app.delete("/courses/address/:add", (req, res) => {
     const address = req.params.add;
     const caller = ic.caller().toString();
+
+    // Only the admin or a moderator or the address themselves can delete
     const result = deleteCourses(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
@@ -211,7 +213,7 @@ export default Server(() => {
     }
   });
 
-  // View the admin
+  // View the admin if present
   app.get("/admin", (req, res) => {
     const adminValues = AdminStorage.values()
     if (adminValues.length > 0) {
@@ -221,7 +223,7 @@ export default Server(() => {
     }
   });
 
-  // Returns all the moderators
+  // Retrieves all the moderator addresses
   app.get("/moderators", (req, res) => {  
     res.json(moderatorsStorage.values());
   })
@@ -229,7 +231,13 @@ export default Server(() => {
   // Set admin
   app.put("/admin/:address", (req, res) => {
     const address = req.params.address;
-    const result = setAdmin(address);
+    let caller: string = ic.caller().toString();
+
+    /* 
+    Sets the admin to the input if not already initialized
+    Allows the admin to change the admin address 
+    */
+    const result = setAdmin(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
     } else {
@@ -237,10 +245,11 @@ export default Server(() => {
     }
   });
 
-  // Add moderator
+  // Add a moderator
   app.put("/moderators/:address", (req, res) => {
     const address = req.params.address;
     let caller = ic.caller().toString();
+    // Only the admin can add a moderator
     const result = addModerator(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
@@ -249,10 +258,11 @@ export default Server(() => {
     }
   });
 
-  // Remove moderator
+  // Remove a moderator
   app.delete("/moderators/:address", (req, res) => {
     const address: string = req.params.address;
     const caller = ic.caller().toString();
+    // Only the admin can remove a moderator
     const result = removeModerator(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
@@ -265,6 +275,7 @@ export default Server(() => {
   app.put("/ban/:address", (req, res) => {
     const address = req.params.address;
     const caller = ic.caller().toString();
+    // Only the admin or a moderator can access
     const result = banUser(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
@@ -273,10 +284,11 @@ export default Server(() => {
     }
   });
 
-  // Unban user
+  // Unban user, removes the user id from the banned storage
   app.delete("/ban/:address", (req, res) => {
     const address = req.params.address;
     const caller = ic.caller().toString();
+    // Only the admin or a moderator can access
     const result = unBanUser(address, caller);
     if (result.type === 'Ok') {
       res.json(result.value);
@@ -290,24 +302,33 @@ export default Server(() => {
 
 // Administration functions
 // If not already initialized, only admin can change
-function setAdmin(address: string): Result<string, string> {
-  let caller: string = ic.caller().toString();
+function setAdmin(address: string, caller: string): Result<string, string> {
   const items = AdminStorage.items();
+  // Check if the admin is already set
   if (items.length > 0) {
     const [key, value] = items[0];
+
+    // Chekcs if the caller is the admin
     if(caller === value) {
+      // Changes the admin from the caller to the input
       AdminStorage.remove(key);
       AdminStorage.insert(uuidv4(),address);
       return Ok(address);
     }
     return Err("not authorized");
   }
+  // If admin is not intialized, then the input is set as the admin
   AdminStorage.insert(uuidv4(),address);
   return Ok(address);
 }
 
-// Add moderator -> only admin can call
+/*
+Only admin can add a moderator
+Maximum number of moderators is set to 5
+A moderator can be set only once
+*/
 function addModerator(address: string, caller: string): Result<string, string> {
+  // Checks if the caller is the admin
   if(!isAdmin(caller) ) {
     return Err("not authorized");
   }
@@ -332,12 +353,8 @@ function addModerator(address: string, caller: string): Result<string, string> {
   return Ok(address);
 }
 
-function isAdmin(address: string): bool {
-  const adminValues = AdminStorage.values();
-  return address.toUpperCase() === adminValues[0].toUpperCase();
-}
 
-// Remove a moderator -> only admin can call
+// Only the admin can remove a moderator
 function removeModerator(address: string, caller: string): Result<string, string> {
   if(!isAdmin(caller)) {
     return Err("You are not authorized to remove a moderator");
@@ -360,10 +377,18 @@ function removeModerator(address: string, caller: string): Result<string, string
     return Err("Provided address is not a moderator");
   }
 
+  // Remove the moderator
   moderatorsStorage.remove(id);
   return Ok(address);
 }
 
+// Validate the input to be the admin
+function isAdmin(address: string): bool {
+  const adminValues = AdminStorage.values();
+  return address.toUpperCase() === adminValues[0].toUpperCase();
+}
+
+// Validate the input to be a moderator
 function isModerator(address: string): bool {
   const moderators = moderatorsStorage.values();
   for (const value of moderators) {
@@ -374,7 +399,10 @@ function isModerator(address: string): bool {
   return false
 }
 
-// Either admin or a moderator can access
+/* 
+Either the admin or a moderator can access
+Cannot ban the admin or a moderator
+*/
 function banUser(address: string, caller: string): Result<string, string> {
   if (
     // Check whether the user is either the admin or a moderator
@@ -396,7 +424,7 @@ function banUser(address: string, caller: string): Result<string, string> {
   }
 }
 
-// can add is authorized helper function
+// Either the admin or a moderator can access
 function unBanUser(address: string, caller: string): Result<string, string> {
   if (
     !isAdmin(caller) || !isModerator(caller) 
@@ -406,18 +434,18 @@ function unBanUser(address: string, caller: string): Result<string, string> {
 
   const bannedUsers = bannedUsersStorage.items();
 
-  let isBanned: bool = false;
-  let id: string = ""
-
-  for (const [key, value] of bannedUsers) {
-    if (value === address) {
-      isBanned = true;
-      id = key;
-    }
+  // Check if the user is banned  
+  if(!isBanned(address)) {
+    return Err("User is not banned");
   }
 
-  if(!isBanned) {
-    return Err("User is not banned");
+  let id: string = ""
+
+  // Obtain the id of the banned user
+  for (const [key, value] of bannedUsers) {
+    if (value === address) {
+      id = key;
+    }
   }
 
   // Remove user from the list of banned users
@@ -559,7 +587,7 @@ function isAuthorized(course: Course, caller: string): bool {
   return false;
 }
 
-// Either the course creator or the admin or a moderator can delete a course
+// Either the caller themselves or the admin or a moderator can delete the courses
 function deleteCourses(address: string, caller: string): Result<string[], string> {
   if (isAdmin(caller) || isModerator(caller) || caller ===  address) {
     return deleteAllCourses(address);
@@ -568,23 +596,28 @@ function deleteCourses(address: string, caller: string): Result<string[], string
   }
 }
 
-// Helper function to delete all the courses of the input address
+// Delete all the courses of the input address
 function deleteAllCourses(address: string): Result<string[], string> {
     let keysOfAddress: string[] = [];
+
+    // Returns an array of tuples containing the key and the value
     let items = courseStorage.items();
   
+    // check if the address matches the creator
     for (const [key, course] of items) {
       if (course.creatorAddress.toUpperCase() === address.toUpperCase()) {
         keysOfAddress.push(key)
       }
     }
+
+    // Remove all courses of the address
     if (keysOfAddress.length > 0){
       for (let id of keysOfAddress) {
         courseStorage.remove(id);
       }
       return Ok(keysOfAddress);
     } else {
-      return Err("no courses for the address");
+      return Err("no courses found for the address");
     }
 }
 
