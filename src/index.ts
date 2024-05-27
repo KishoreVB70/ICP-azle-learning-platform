@@ -216,7 +216,9 @@ export default Server(() => {
     }
   });
 
-  // View the admin if present
+  // Administrative functions
+
+  // View the admin
   app.get("/admin", (req, res) => {
     if (!AdminStorage.isEmpty()) {
       const adminValue = AdminStorage.values(0,1);
@@ -305,169 +307,6 @@ export default Server(() => {
 
   return app.listen();
 });
-
-// Administration functions
-// If not already initialized, only admin can change
-function setAdmin(address: string, caller: string): Result<string, string> {
-  const items = AdminStorage.items();
-  // Check if the admin is already set
-  if (items.length > 0) {
-    const [key, value] = items[0];
-
-    // Chekcs if the caller is the admin
-    if(caller === value) {
-      // Changes the admin from the caller to the input
-      AdminStorage.remove(key);
-      AdminStorage.insert(uuidv4(),address);
-      return Ok(address);
-    }
-    return Err("not authorized");
-  }
-  // If admin is not intialized, then the input is set as the admin
-  AdminStorage.insert(uuidv4(),address);
-  return Ok(address);
-}
-
-/*
-Only admin can add a moderator
-Maximum number of moderators is set to 5
-A moderator can be set only once
-*/
-function addModerator(address: string, caller: string): Result<string, string> {
-  // Checks if the caller is the admin
-  if(!isAdmin(caller) ) {
-    return Err("not authorized");
-  }
-
-  // Returns array of tuple containing key and values
-  let moderators = moderatorsStorage.values();
-
-  // Maximum number of moderators = 5
-  if (moderators.length === 5) {
-    return Err("maximum number of moderators added");
-  }
-
-  // Check if moderator already present
-  for ( const value of moderators) {
-    if (value === address) {
-      return Err("moderator already added")
-    }
-  }
-
-  // Add moderator into storage
-  moderatorsStorage.insert(uuidv4(), address);
-  return Ok(address);
-}
-
-// Only the admin can remove a moderator
-function removeModerator(address: string, caller: string): Result<string, string> {
-  if(!isAdmin(caller)) {
-    return Err("You are not authorized to remove a moderator");
-  }
-
-  let moderators = moderatorsStorage.items();
-  let isModerator: boolean = false;
-
-  // Obtain the id of the address
-  let id: string = "";
-  for (const [key, value] of moderators) {
-    if (value === address) {
-      isModerator = true;
-      id = key;
-      break;
-    }
-  }
-
-  if(!isModerator){
-    return Err("Provided address is not a moderator");
-  }
-
-  // Remove the moderator
-  moderatorsStorage.remove(id);
-  return Ok(address);
-}
-
-// Validate the input to be the admin
-function isAdmin(address: string): bool {
-  const adminValues = AdminStorage.values();
-  return address.toUpperCase() === adminValues[0].toUpperCase();
-}
-
-// Validate the input to be a moderator
-function isModerator(address: string): bool {
-  const moderators = moderatorsStorage.values();
-  for (const value of moderators) {
-    if (value.toUpperCase() === address.toUpperCase()) {
-      return true
-    }
-  }
-  return false
-}
-
-/* 
-Either the admin or a moderator can access
-Cannot ban the admin or a moderator
-*/
-function banUser(address: string, caller: string): Result<string, string> {
-  if (
-    // Check whether the user is either the admin or a moderator
-    ( !isAdmin(caller) && !isModerator(caller) ) ||
-
-    // Check if the address to be banned is a moderator or admin
-    ( isAdmin(address) || isModerator(address) )
-  ) {
-    return Err("you are not authorized to ban the user")
-  }
-
-  // Delete all the courses of the banned user
-  const result = deleteAllCourses(address)
-  if(result.type ==='Ok') {
-    bannedUsersStorage.insert(uuidv4(), address);
-    return Ok(address);
-  } else {
-    return Err("User has no courses, cannot ban");
-  }
-}
-
-// Either the admin or a moderator can access
-function unBanUser(address: string, caller: string): Result<string, string> {
-  if (
-    !isAdmin(caller) || !isModerator(caller) 
-  ) {
-    return Err("you are not authorized to unban the user")
-  }
-
-  const bannedUsers = bannedUsersStorage.items();
-
-  // Check if the user is banned  
-  if(!isBanned(address)) {
-    return Err("User is not banned");
-  }
-
-  let id: string = ""
-
-  // Obtain the id of the banned user
-  for (const [key, value] of bannedUsers) {
-    if (value === address) {
-      id = key;
-    }
-  }
-
-  // Remove user from the list of banned users
-  bannedUsersStorage.remove(id);
-  return Ok(address);
-}
-
-// Check whether the user is banned
-function isBanned(address: string): bool {
-  const bannedUsers = bannedUsersStorage.values();
-  for (const value of bannedUsers) {
-    if (value === address) {
-      return true;
-    }
-  }
-  return false;
-}
 
 /* 
 Filters courses based on the provided criteria (OR condition).
@@ -583,14 +422,6 @@ function deleteCourse(id: string, caller: string): Result<Course,string> {
   return Ok(course);
 }
 
-// Checks if the caller is either the creator or the admin or a moderator
-function isAuthorized(course: Course, caller: string): bool {
-  if (isAdmin(caller) || isModerator(caller) || caller === course.creatorAddress ) {
-    return true;
-  } 
-  return false;
-}
-
 // Either the caller themselves or the admin or a moderator can delete the courses
 function deleteCourses(address: string, caller: string): Result<string[], string> {
   if (isAdmin(caller) || isModerator(caller) || caller ===  address) {
@@ -623,6 +454,181 @@ function deleteAllCourses(address: string): Result<string[], string> {
     } else {
       return Err("no courses found for the address");
     }
+}
+
+// Administrative functions
+// If not already initialized, only admin can change
+function setAdmin(address: string, caller: string): Result<string, string> {
+  const items = AdminStorage.items();
+  // Check if the admin is already set
+  if (items.length > 0) {
+    const [key, value] = items[0];
+
+    // Chekcs if the caller is the admin
+    if(caller === value) {
+      // Changes the admin from the caller to the input
+      AdminStorage.remove(key);
+      AdminStorage.insert(uuidv4(),address);
+      return Ok(address);
+    }
+    return Err("not authorized");
+  }
+  // If admin is not intialized, then the input is set as the admin
+  AdminStorage.insert(uuidv4(),address);
+  return Ok(address);
+}
+
+/*
+Only admin can add a moderator
+Maximum number of moderators is set to 5
+A moderator can be set only once
+*/
+function addModerator(address: string, caller: string): Result<string, string> {
+  // Checks if the caller is the admin
+  if(!isAdmin(caller) ) {
+    return Err("not authorized");
+  }
+
+  // Returns array of tuple containing key and values
+  let moderators = moderatorsStorage.values();
+
+  // Maximum number of moderators = 5
+  if (moderators.length === 5) {
+    return Err("maximum number of moderators added");
+  }
+
+  // Check if moderator already present
+  for ( const value of moderators) {
+    if (value === address) {
+      return Err("moderator already added")
+    }
+  }
+
+  // Add moderator into storage
+  moderatorsStorage.insert(uuidv4(), address);
+  return Ok(address);
+}
+
+// Only the admin can remove a moderator
+function removeModerator(address: string, caller: string): Result<string, string> {
+  if(!isAdmin(caller)) {
+    return Err("You are not authorized to remove a moderator");
+  }
+
+  let moderators = moderatorsStorage.items();
+  let isModerator: boolean = false;
+
+  // Obtain the id of the address
+  let id: string = "";
+  for (const [key, value] of moderators) {
+    if (value === address) {
+      isModerator = true;
+      id = key;
+      break;
+    }
+  }
+
+  if(!isModerator){
+    return Err("Provided address is not a moderator");
+  }
+
+  // Remove the moderator
+  moderatorsStorage.remove(id);
+  return Ok(address);
+}
+
+/* 
+Either the admin or a moderator can access
+Cannot ban the admin or a moderator
+*/
+function banUser(address: string, caller: string): Result<string, string> {
+  if (
+    // Check whether the user is either the admin or a moderator
+    ( !isAdmin(caller) && !isModerator(caller) ) ||
+
+    // Check if the address to be banned is a moderator or admin
+    ( isAdmin(address) || isModerator(address) )
+  ) {
+    return Err("you are not authorized to ban the user")
+  }
+
+  /*
+  Delete all the courses of the banned user
+  Due to this check, the same user cannot be banned twice 
+  as a banned user cannot add course 
+  */
+  const result = deleteAllCourses(address)
+  if(result.type ==='Ok') {
+    bannedUsersStorage.insert(uuidv4(), address);
+    return Ok(address);
+  } else {
+    return Err("User has no courses, cannot ban");
+  }
+}
+
+// Either the admin or a moderator can access
+function unBanUser(address: string, caller: string): Result<string, string> {
+  if (
+    !isAdmin(caller) || !isModerator(caller) 
+  ) {
+    return Err("you are not authorized to unban the user")
+  }
+
+  const bannedUsers = bannedUsersStorage.items();
+
+  // Check if the user is banned  
+  if(!isBanned(address)) {
+    return Err("User is not banned");
+  }
+
+  let id: string = ""
+
+  // Obtain the id of the banned user
+  for (const [key, value] of bannedUsers) {
+    if (value === address) {
+      id = key;
+    }
+  }
+
+  // Remove user from the list of banned users
+  bannedUsersStorage.remove(id);
+  return Ok(address);
+}
+
+// Checks if the caller is either the creator or the admin or a moderator
+function isAuthorized(course: Course, caller: string): bool {
+  if (isAdmin(caller) || isModerator(caller) || caller === course.creatorAddress ) {
+    return true;
+  } 
+  return false;
+}
+
+// Validate the input to be the admin
+function isAdmin(address: string): bool {
+  const adminValues = AdminStorage.values();
+  return address.toUpperCase() === adminValues[0].toUpperCase();
+}
+
+// Validate the input to be a moderator
+function isModerator(address: string): bool {
+  const moderators = moderatorsStorage.values();
+  for (const value of moderators) {
+    if (value.toUpperCase() === address.toUpperCase()) {
+      return true
+    }
+  }
+  return false
+}
+
+// Check whether the user is banned
+function isBanned(address: string): bool {
+  const bannedUsers = bannedUsersStorage.values();
+  for (const value of bannedUsers) {
+    if (value === address) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function getCurrentDate() {
