@@ -504,7 +504,8 @@ function isBanned(address: string): bool {
   return false;
 }
 
-// If not already initialized, only admin can change
+// Set the admin if not already initialized
+// only the current admin can change if already initialized
 function setAdmin(address: string, caller: string): Result<string, string> {
   const items = AdminStorage.items();
   // Check if the admin is already set
@@ -622,6 +623,7 @@ function banUser(address: string, caller: string): Result<string, string> {
   }
 }
 
+// Remove the user from the banned list
 // Either the admin or a moderator can access
 function unBanUser(address: string, caller: string): Result<string, string> {
   if (
