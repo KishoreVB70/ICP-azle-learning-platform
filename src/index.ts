@@ -81,6 +81,9 @@ export default Server(() => {
 
   // Retreive all courses
   app.get("/courses", (req, res) => {
+    if(courseStorage.isEmpty()) {
+      return res.status(500).send("No courses added");
+    }
     res.json(courseStorage.values());
   });
 
@@ -226,7 +229,7 @@ export default Server(() => {
   // Retrieves all the moderator addresses
   app.get("/moderators", (req, res) => {
     if (!moderatorsStorage.isEmpty()) {
-      res.json(moderatorsStorage.values());
+      return res.json(moderatorsStorage.values());
     }
     res.status(500).send("moderators not set");
   })
